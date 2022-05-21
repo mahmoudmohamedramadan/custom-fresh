@@ -1,0 +1,28 @@
+{
+    "name": "ramadan/custom-fresh",
+    "description": "Specify the tables that you don't want to drop during refreshing the database",
+    "keywords": ["custom-fresh", "migration", "migrate", "database", "refreshing"],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Mahmoud Mohamed Ramadan",
+            "email": "mahmoudramadan496@gmail.com",
+            "homepage": "https://www.mmramadan.com",
+            "role": "Back-end Developer"
+        }
+    ],
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "Ramadan\\CustomFresh\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Ramadan\\CustomFresh\\CustomFreshServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "dev"
+}
