@@ -22,7 +22,7 @@ After installing the package, you will now see a new `fresh:custom` command.
 
 ### Refreshing migrations
 
-You can except specific tables during refreshing the database inside your project using:
+You can exclude specific tables during refreshing the database inside your project using:
 
 ```BASH
 php artisan fresh:custom users password_resets
