@@ -57,10 +57,9 @@ class CustomFreshCommand extends Command
         $fullMigrationFilesInfo = ["migrationFileNames" => [], "correctTableNames" => []];
 
         foreach (array_filter($tableNames) as $table) {
-            if (!empty($migrationFileName = glob("{$migrationPath}/*_create_{$table}_table.php"))) {
-                array_push($fullMigrationFilesInfo["correctTableNames"], $table);
-                array_push($fullMigrationFilesInfo["migrationFileNames"], basename($migrationFileName[0]));
-            } else {
+            $isExist = $this->checkMigrationFileExistence($migrationPath, $table, $fullMigrationFilesInfo);
+
+            if (!$isExist) {
                 $this->error("The {$table} table does not exist.");
 
                 $choiceValue = $this->choice(
@@ -68,11 +67,7 @@ class CustomFreshCommand extends Command
                     array_map("current", DB::select("SHOW TABLES"))
                 );
 
-                array_push($fullMigrationFilesInfo["correctTableNames"], $choiceValue);
-
-                if (!empty($migrationFileName = glob("{$migrationPath}/*_create_{$choiceValue}_table.php"))) {
-                    array_push($fullMigrationFilesInfo["migrationFileNames"], basename($migrationFileName[0]));
-                }
+                $this->checkMigrationFileExistence($migrationPath, $choiceValue, $fullMigrationFilesInfo);
             }
         }
 
@@ -108,5 +103,25 @@ class CustomFreshCommand extends Command
         Artisan::call("migrate --force");
 
         $this->info("The migration files were migrated successfully.");
+    }
+
+    /**
+     * Check if the migration file is exist.
+     *
+     * @param  string  $migrationPath
+     * @param  string  $table
+     * @param  array   $fullMigrationFilesInfo
+     * @return bool
+     */
+    private function checkMigrationFileExistence(string $migrationPath, string $table, array &$fullMigrationFilesInfo)
+    {
+        if (!empty($migrationFileName = glob("{$migrationPath}/*_create_{$table}_table.php"))) {
+            array_push($fullMigrationFilesInfo["correctTableNames"], $table);
+            array_push($fullMigrationFilesInfo["migrationFileNames"], basename($migrationFileName[0]));
+
+            return true;
+        }
+
+        return false;
     }
 }
