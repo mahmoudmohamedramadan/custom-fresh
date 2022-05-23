@@ -5,6 +5,7 @@ Custom Fresh allows fine-grain control of migrations inside your Laravel project
 - [Installation](#installation)
 - [Usage](#usage)
   - [Refreshing migrations](#refreshing-migrations)
+  - [Example](#example)
 - [Credits](#credits)
 - [Support me](#support-me)
 
@@ -27,6 +28,11 @@ You can exclude specific tables during refreshing the database inside your proje
 ```BASH
 php artisan fresh:custom users password_resets
 ```
+
+### Example
+
+![cmd](https://user-images.githubusercontent.com/48416569/169878698-e162d509-0eab-4c89-8ecd-d9fcee3f9f34.png)
+
 
 ## Credits
 
