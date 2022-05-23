@@ -93,11 +93,9 @@ class CustomFreshCommand extends Command
         $droppedTables = array_diff($droppedTables, array_merge(array_filter($tableNames), ["migrations"]));
 
         foreach ($droppedTables as $table) {
-            if (Schema::hasTable($table)) {
-                Schema::dropIfExists($table);
+            Schema::dropIfExists($table);
 
-                $this->info("The {$table} table was dropped successfully.");
-            }
+            $this->info("The {$table} table was dropped successfully.");
         }
 
         Artisan::call("migrate --force");
