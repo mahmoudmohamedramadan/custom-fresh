@@ -64,7 +64,7 @@ class CustomFreshCommand extends Command
 
                 $choiceValue = $this->choice(
                     "Please choose the table that you want",
-                    array_map("current", DB::select("SHOW TABLES"))
+                    array_diff(array_map("current", DB::select("SHOW TABLES")), $fullMigrationFilesInfo["correctTableNames"])
                 );
 
                 $this->checkMigrationFileExistence($migrationPath, $choiceValue, $fullMigrationFilesInfo);
