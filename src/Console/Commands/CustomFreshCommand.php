@@ -46,7 +46,7 @@ class CustomFreshCommand extends Command
     }
 
     /**
-     * Get the migration file names.
+     * Get an array of correct table names and migration file names.
      *
      * @param  array  $tableNames
      * @return array
