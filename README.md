@@ -33,7 +33,6 @@ php artisan fresh:custom users password_resets
 
 ![cmd](https://user-images.githubusercontent.com/48416569/169878698-e162d509-0eab-4c89-8ecd-d9fcee3f9f34.png)
 
-
 ## Credits
 
 - [Mahmoud Mohamed Ramadan](https://github.com/mahmoudmohamedramadan)
