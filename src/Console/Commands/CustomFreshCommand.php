@@ -56,10 +56,10 @@ class CustomFreshCommand extends Command
         $migrationPath          = database_path('migrations');
         $fullMigrationFilesInfo = ["migrationFileNames" => [], "correctTableNames" => []];
 
-        foreach (array_filter($tableNames) as $table) {
-            $isExist = $this->checkMigrationFileExistence($migrationPath, $table, $fullMigrationFilesInfo);
+        foreach (array_filter($tableNames) as $index => $table) {
+            $this->checkMigrationFileExistence($migrationPath, $table, $fullMigrationFilesInfo);
 
-            if (!$isExist) {
+            if (empty($fullMigrationFilesInfo["correctTableNames"][$index])) {
                 $this->error("The {$table} table does not exist.");
 
                 $choiceValue = $this->choice(
@@ -112,17 +112,28 @@ class CustomFreshCommand extends Command
      * @param  string  $migrationPath
      * @param  string  $table
      * @param  array   $fullMigrationFilesInfo
-     * @return bool
+     * @return void
      */
     private function checkMigrationFileExistence(string $migrationPath, string $table, array &$fullMigrationFilesInfo)
     {
         if (!empty($migrationFileName = glob("{$migrationPath}/*_create_{$table}_table.php"))) {
             array_push($fullMigrationFilesInfo["correctTableNames"], $table);
             array_push($fullMigrationFilesInfo["migrationFileNames"], basename($migrationFileName[0]));
-
-            return true;
+        } elseif (!empty($migrationFileName = glob("{$migrationPath}/*_create_{$table}.php"))) {
+            array_push($fullMigrationFilesInfo["correctTableNames"], $table);
+            array_push($fullMigrationFilesInfo["migrationFileNames"], basename($migrationFileName[0]));
         }
 
-        return false;
+        if (!empty($migrationFileName = glob("{$migrationPath}/*_to_{$table}_table.php"))) {
+            array_push($fullMigrationFilesInfo["migrationFileNames"], basename($migrationFileName[0]));
+        }
+
+        if (!empty($migrationFileName = glob("{$migrationPath}/*_from_{$table}_table.php"))) {
+            array_push($fullMigrationFilesInfo["migrationFileNames"], basename($migrationFileName[0]));
+        }
+
+        if (!empty($migrationFileName = glob("{$migrationPath}/*_in_{$table}_table.php"))) {
+            array_push($fullMigrationFilesInfo["migrationFileNames"], basename($migrationFileName[0]));
+        }
     }
 }
