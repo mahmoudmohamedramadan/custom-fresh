@@ -31,7 +31,7 @@ php artisan fresh:custom users password_resets
 
 ### Example
 
-![cmd](https://user-images.githubusercontent.com/48416569/169878698-e162d509-0eab-4c89-8ecd-d9fcee3f9f34.png)
+![cmd](https://user-images.githubusercontent.com/48416569/170218918-bf9fb0d1-c2ab-486c-8eb0-13258c88acfd.png)
 
 ## Credits
 
