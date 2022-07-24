@@ -1,5 +1,13 @@
 # Custom Fresh
 
+![Custom Fresh](https://user-images.githubusercontent.com/48416569/180634178-2ea1ce4c-6e6d-4374-843d-6175785238f6.png "Custom Fresh")
+
+![License](https://img.shields.io/packagist/l/ramadan/custom-fresh "License")
+![Latest Version on Packagist](https://img.shields.io/packagist/v/ramadan/custom-fresh "Latest Version on Packagist")
+![Total Downloads](https://img.shields.io/packagist/dt/ramadan/custom-fresh "Total Downloads")
+
+ - - -
+
 Custom Fresh allows fine-grain control of migrations inside your Laravel project. You can choose which tables will not be dropped during refreshing the database.
 
 - [Installation](#installation)
