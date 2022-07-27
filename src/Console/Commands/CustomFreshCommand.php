@@ -38,6 +38,14 @@ class CustomFreshCommand extends Command
             return 1;
         }
 
+        if (empty(array_map("current", DB::select("SHOW TABLES")))) {
+            $this->components->info('Your database is empty, migration working now...');
+
+            Artisan::call('migrate');
+
+            $this->components->info('Your database was migrated successfully.');
+        }
+
         $fullMigrationFilesInfo = $this->getMigrationFileNames($this->argument("table"));
 
         $this->dropTables($fullMigrationFilesInfo["correctTableNames"], $fullMigrationFilesInfo["migrationFileNames"]);
@@ -60,7 +68,7 @@ class CustomFreshCommand extends Command
             $this->checkMigrationFileExistence($migrationPath, $table, $fullMigrationFilesInfo);
 
             if (empty($fullMigrationFilesInfo["correctTableNames"][$index])) {
-                $this->error("The {$table} table does not exist.");
+                $this->components->error("The {$table} table does not exist.");
 
                 $choiceValue = $this->choice(
                     "Please choose the table that you want",
@@ -95,19 +103,21 @@ class CustomFreshCommand extends Command
         $droppedTables = array_map("current", DB::select("SHOW TABLES"));
         $droppedTables = array_diff($droppedTables, array_merge(array_filter($tableNames), ["migrations"]));
 
+        Schema::disableForeignKeyConstraints();
+
         foreach ($droppedTables as $table) {
             Schema::dropIfExists($table);
 
-            $this->info("The {$table} table was dropped successfully.");
+            $this->components->info("The {$table} table was dropped successfully.");
         }
 
         Artisan::call("migrate --force");
 
-        $this->info("The migration files were migrated successfully.");
+        $this->components->info("The migration files were migrated successfully.");
     }
 
     /**
-     * Check if the migration file is exist.
+     * Check the migration existence.
      *
      * @param  string  $migrationPath
      * @param  string  $table
