@@ -21,7 +21,7 @@ Custom Fresh allows fine-grain control of migrations inside your Laravel project
 
 You can install the package via composer:
 
-```COMPOSER
+```SHELL
 composer require ramadan/custom-fresh
 ```
 
@@ -33,13 +33,13 @@ After installing the package, you will now see a new `fresh:custom` command.
 
 You can exclude specific tables during refreshing the database inside your project using:
 
-```ARTISAN
-php artisan fresh:custom users invalid_table_name
+```SHELL
+php artisan fresh:custom posts invalid_table_name
 ```
 
 ### Example
 
-![cmd](https://user-images.githubusercontent.com/48416569/181294894-8e5347bb-7b46-48ba-a259-a390ca44f45b.png "Custom Fresh")
+![cmd](https://user-images.githubusercontent.com/48416569/200514609-3c244963-cb12-4eb9-b68c-700c39cdcc6d.png "Custom Fresh")
 
 ## Credits
 
