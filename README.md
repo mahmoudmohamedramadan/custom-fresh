@@ -48,7 +48,7 @@ php artisan fresh:custom posts invalid_table_name
 
 ## Support me
 
-- [PayPal](https://www.paypal.com/paypalme/ramadanpaid)
+- [PayPal](https://www.paypal.com/paypalme/mmramadan496)
 
 ## License
 
