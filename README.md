@@ -31,15 +31,15 @@ After installing the package, you will now see a new `fresh:custom` command.
 
 ### Refreshing migrations
 
-You can exclude specific tables during refreshing the database inside your project using:
+You can exclude specific tables while refreshing the database inside your project using:
 
 ```SHELL
-php artisan fresh:custom posts invalid_table_name
+php artisan fresh:custom posts,invalid_table_name
 ```
 
 ### Example
 
-![cmd](https://user-images.githubusercontent.com/48416569/200514609-3c244963-cb12-4eb9-b68c-700c39cdcc6d.png "Custom Fresh")
+![cmd](https://github.com/mahmoudmohamedramadan/custom-fresh/assets/48416569/06cc0df0-45f7-488b-b448-7ca18ffcf767 "Custom Fresh")
 
 ## Credits
 
