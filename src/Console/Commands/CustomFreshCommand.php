@@ -38,21 +38,24 @@ class CustomFreshCommand extends Command
         }
 
         if (empty(array_map("current", DB::select("SHOW TABLES")))) {
-            $this->components->info('Your database is empty, migration working now...');
-
-            $this->call('migrate', ['--force' => true]);
-
-            $this->components->info('Your database was migrated successfully.');
+            $this->components->task(
+                'Migrating your database schema',
+                fn () => $this->call('migrate', ['--force' => true])
+            );
         }
 
         $tableNames = explode(",", $this->argument("table"));
 
         $fullMigrationFilesInfo = $this->getMigrationFileNames($tableNames);
 
-        $this->dropTables(
+        $this->components->info('Preparing database.');
+
+        $this->components->task('Dropping the tables', $this->dropTables(
             $fullMigrationFilesInfo["correctTableNames"],
             $fullMigrationFilesInfo["migrationFileNames"]
-        );
+        ));
+
+        $this->call('migrate', ['--force' => true]);
 
         return 0;
     }
@@ -123,13 +126,7 @@ class CustomFreshCommand extends Command
 
         foreach ($droppedTables as $table) {
             Schema::dropIfExists($table);
-
-            $this->components->info("The `{$table}` table was dropped successfully.");
         }
-
-        $this->call('migrate', ['--force' => true]);
-
-        $this->components->info("The migration files were migrated successfully.");
     }
 
     /**
