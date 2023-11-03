@@ -3,7 +3,6 @@
 namespace Ramadan\CustomFresh\Console\Commands;
 
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Ramadan\CustomFresh\Console\Confirmable;
@@ -41,7 +40,7 @@ class CustomFreshCommand extends Command
         if (empty(array_map("current", DB::select("SHOW TABLES")))) {
             $this->components->info('Your database is empty, migration working now...');
 
-            Artisan::call('migrate');
+            $this->call('migrate', ['--force' => true]);
 
             $this->components->info('Your database was migrated successfully.');
         }
@@ -128,7 +127,7 @@ class CustomFreshCommand extends Command
             $this->components->info("The `{$table}` table was dropped successfully.");
         }
 
-        Artisan::call("migrate --force");
+        $this->call('migrate', ['--force' => true]);
 
         $this->components->info("The migration files were migrated successfully.");
     }
