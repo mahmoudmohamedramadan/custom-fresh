@@ -79,10 +79,8 @@ class CustomFreshCommand extends Command
             );
 
             if (empty($fullMigrationFilesInfo["correctTableNames"][$index])) {
-                $this->components->error("The `{$table}` table does not exist.");
-
                 $choiceValue = $this->choice(
-                    "Please choose the correct table instead of `{$table}`",
+                    "Choose the correct table instead ({$table})",
                     array_diff(
                         array_map("current", DB::select("SHOW TABLES")),
                         array_merge($fullMigrationFilesInfo["correctTableNames"], ["migrations"])
