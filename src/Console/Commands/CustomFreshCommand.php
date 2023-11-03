@@ -17,7 +17,7 @@ class CustomFreshCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'fresh:custom {table* : The table(s) that you don\'t want to fresh}
+    protected $signature = 'fresh:custom {table : The table(s) that you don\'t want to fresh}
                 {--force : Force the operation to run when in production}';
 
     /**
@@ -46,7 +46,9 @@ class CustomFreshCommand extends Command
             $this->components->info('Your database was migrated successfully.');
         }
 
-        $fullMigrationFilesInfo = $this->getMigrationFileNames($this->argument("table"));
+        $tableNames = explode(",", $this->argument("table"));
+
+        $fullMigrationFilesInfo = $this->getMigrationFileNames($tableNames);
 
         $this->dropTables(
             $fullMigrationFilesInfo["correctTableNames"],
