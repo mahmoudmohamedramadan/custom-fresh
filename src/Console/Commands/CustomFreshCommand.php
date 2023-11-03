@@ -61,7 +61,7 @@ class CustomFreshCommand extends Command
     }
 
     /**
-     * Get an array of correct table names and migration file names.
+     * Get an array of the correct table names with migration file names.
      *
      * @param  array  $tableNames
      * @return array
@@ -101,7 +101,7 @@ class CustomFreshCommand extends Command
     }
 
     /**
-     * Drop all tables except the given array of table name from the database.
+     * Drop all tables except the given array of table names from the database.
      *
      * @param  array  $tableNames
      * @param  array  $migrationFileNames
@@ -130,7 +130,7 @@ class CustomFreshCommand extends Command
     }
 
     /**
-     * Check the migration existence.
+     * Check if the given migration file exists.
      *
      * @param  string  $migrationPath
      * @param  string  $table
