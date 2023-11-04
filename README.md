@@ -1,6 +1,6 @@
 # Custom Fresh
 
-![Custom Fresh](https://user-images.githubusercontent.com/48416569/180634178-2ea1ce4c-6e6d-4374-843d-6175785238f6.png "Custom Fresh")
+![Custom Fresh](https://github.com/mahmoudmohamedramadan/custom-fresh/assets/48416569/d6c582d8-72c9-4029-81d9-06e5d57fc98f "Custom Fresh")
 
 ![License](https://img.shields.io/packagist/l/ramadan/custom-fresh "License")
 ![Latest Version on Packagist](https://img.shields.io/packagist/v/ramadan/custom-fresh "Latest Version on Packagist")
@@ -8,7 +8,7 @@
 
  - - -
 
-Custom Fresh allows fine-grain control of migrations inside your Laravel project. You can choose which tables will not be dropped during refreshing the database.
+Custom Fresh allows fine-grain control of migrations inside your Laravel project, where you can choose which tables will not be dropped while refreshing the database.
 
 - [Installation](#installation)
 - [Usage](#usage)
@@ -19,7 +19,7 @@ Custom Fresh allows fine-grain control of migrations inside your Laravel project
 
 ## Installation
 
-You can install the package via composer:
+You can install the package via Composer:
 
 ```SHELL
 composer require ramadan/custom-fresh
