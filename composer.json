@@ -1,14 +1,21 @@
 {
     "name": "ramadan/custom-fresh",
-    "description": "Specify the tables that you don't want to drop during refreshing the database",
-    "keywords": ["custom-fresh", "migration", "migrate", "database", "refreshing"],
+    "description": "A Laravel package to specify the tables that you do not want to drop while refreshing the database",
+    "homepage": "https://github.com/mahmoudmohamedramadan/custom-fresh",
+    "keywords": [
+        "custom-fresh",
+        "migration",
+        "migrate",
+        "database",
+        "refreshing"
+    ],
     "license": "MIT",
     "authors": [
         {
             "name": "Mahmoud Mohamed Ramadan",
             "email": "mahmoudramadan496@gmail.com",
             "homepage": "https://www.mmramadan.com",
-            "role": "Back-end Developer"
+            "role": "Developer"
         }
     ],
     "require": {},
@@ -24,5 +31,15 @@
             ]
         }
     },
-    "minimum-stability": "dev"
+    "minimum-stability": "dev",
+    "funding": [
+        {
+            "type": "github",
+            "url": "https://github.com/mahmoudmohamedramadan/custom-fresh#support-me"
+        },
+        {
+            "type": "other",
+            "url": "https://blog.mmramadan.com/support-me"
+        }
+    ]
 }
