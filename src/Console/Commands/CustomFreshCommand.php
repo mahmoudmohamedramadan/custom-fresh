@@ -16,7 +16,7 @@ class CustomFreshCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'fresh:custom {table : The table(s) that you don\'t want to fresh}
+    protected $signature = 'fresh:custom {table : The table(s) that you do not want to fresh}
                 {--force : Force the operation to run when in production}';
 
     /**
@@ -24,7 +24,7 @@ class CustomFreshCommand extends Command
      *
      * @var string
      */
-    protected $description = 'Create exceptions for the given table names during refreshing the database';
+    protected $description = 'Create exceptions for the given table names while refreshing the database';
 
     /**
      * Execute the console command.
