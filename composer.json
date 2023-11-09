@@ -3,11 +3,12 @@
     "description": "A Laravel package to specify the tables that you do not want to drop while refreshing the database",
     "homepage": "https://github.com/mahmoudmohamedramadan/custom-fresh",
     "keywords": [
+        "laravel",
         "custom-fresh",
-        "migration",
         "migrate",
         "database",
-        "refreshing"
+        "refreshing",
+        "development"
     ],
     "license": "MIT",
     "authors": [
