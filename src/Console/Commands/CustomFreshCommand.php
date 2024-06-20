@@ -37,24 +37,20 @@ class CustomFreshCommand extends Command
             return 1;
         }
 
-        // At first, we will check if the database does not contain any table
-        // then run the `migrate` command.
-        if (empty($this->getTables())) {
-            $this->components->task(
-                'Migrating your database schema',
-                fn () => $this->call('migrate', ['--force' => true])
-            );
-        }
+        $this->components->task(
+            'Migrating your database schema',
+            fn () => $this->call('migrate', ['--force' => true])
+        );
 
-        $migrationsInfo = $this->getMigrationsInfo(
+        $migrations = $this->getMigrations(
             explode(",", $this->argument("table"))
         );
 
         $this->components->info('Preparing database.');
 
         $this->components->task('Dropping the tables', $this->dropTables(
-            $migrationsInfo["tableNames"],
-            $migrationsInfo["migrationNames"]
+            $migrations["tableNames"],
+            $migrations["migrationNames"]
         ));
 
         $this->call('migrate', ['--force' => true]);
@@ -63,7 +59,7 @@ class CustomFreshCommand extends Command
     }
 
     /**
-     * Get an array of all the tables in the database.
+     * Get the listed tables in the database.
      * 
      * @return array
      */
@@ -73,27 +69,25 @@ class CustomFreshCommand extends Command
     }
 
     /**
-     * Get an array of the migration file names and correct table names.
+     * Get the correct table names with their migration.
      *
      * @param  array  $tablesToBeDropped
      * @return array
      */
-    protected function getMigrationsInfo(array $tablesToBeDropped)
+    protected function getMigrations(array $tablesToBeDropped)
     {
         $migrationsPath = database_path('migrations');
-        $migrationsInfo = ["migrationNames" => [], "tableNames" => []];
 
-        // In addition, we will filter the given array of tables, and then iterate over
-        // each one and check if the passed table exists to get its relevant migrations.
+        // At first, we will filter the given array of tables, and then iterate over
+        // each one to check if the passed table has a migration then we will check if
+        // the `tableNames` has been set by the `getMigrationsInfo` method or not
+        // because if it is set, it means the table is there
+        // or we will ask the developer to choose the correct table instead.
         foreach (array_filter($tablesToBeDropped) as $index => $table) {
-            $migrationsInfo = $this->checkMigrationFileExistence(
-                $migrationsPath,
-                $table,
-                $migrationsInfo
-            );
+            $migrationsInfo = $this->getMigrationsInfo($migrationsPath, $table);
 
             if (empty($migrationsInfo["tableNames"][$index])) {
-                $choiceValue = $this->choice(
+                $value = $this->choice(
                     "Choose the correct table instead ({$table})",
                     array_diff(
                         $this->getTables(),
@@ -101,12 +95,42 @@ class CustomFreshCommand extends Command
                     )
                 );
 
-                $migrationsInfo = $this->checkMigrationFileExistence(
-                    $migrationsPath,
-                    $choiceValue,
-                    $migrationsInfo
-                );
+                $migrationsInfo = $this->getMigrationsInfo($migrationsPath, $value);
             }
+        }
+
+        return $migrationsInfo;
+    }
+
+    /**
+     * Get the migrations that match the given table.
+     *
+     * @param  string  $migrationsPath
+     * @param  string  $table
+     * @return array
+     */
+    protected function getMigrationsInfo(string $migrationsPath, string $table)
+    {
+        $migrationsInfo = ["migrationNames" => [], "tableNames" => []];
+
+        if (!empty($migrationName = glob("{$migrationsPath}/*_create_{$table}_table.php"))) {
+            array_push($migrationsInfo["tableNames"], $table);
+            array_push($migrationsInfo["migrationNames"], basename($migrationName[0]));
+        } elseif (!empty($migrationName = glob("{$migrationsPath}/*_create_{$table}.php"))) {
+            array_push($migrationsInfo["tableNames"], $table);
+            array_push($migrationsInfo["migrationNames"], basename($migrationName[0]));
+        }
+
+        if (!empty($migrationName = glob("{$migrationsPath}/*_to_{$table}_table.php"))) {
+            array_push($migrationsInfo["migrationNames"], basename($migrationName[0]));
+        }
+
+        if (!empty($migrationName = glob("{$migrationsPath}/*_from_{$table}_table.php"))) {
+            array_push($migrationsInfo["migrationNames"], basename($migrationName[0]));
+        }
+
+        if (!empty($migrationName = glob("{$migrationsPath}/*_in_{$table}_table.php"))) {
+            array_push($migrationsInfo["migrationNames"], basename($migrationName[0]));
         }
 
         return $migrationsInfo;
@@ -128,9 +152,8 @@ class CustomFreshCommand extends Command
                 ->insert(["migration" => substr_replace($migration, "", -4), "batch" => 1]);
         }
 
-        $droppedTables = array_map("current", DB::select("SHOW TABLES"));
         $droppedTables = array_diff(
-            $droppedTables,
+            $this->getTables(),
             array_merge(array_filter($tableNames), ["migrations"])
         );
 
@@ -139,56 +162,5 @@ class CustomFreshCommand extends Command
         foreach ($droppedTables as $table) {
             Schema::dropIfExists($table);
         }
-    }
-
-    /**
-     * Check if the given migration file exists.
-     *
-     * @param  string  $migrationsPath
-     * @param  string  $table
-     * @param  array   $migrationsInfo
-     * @return array
-     */
-    protected function checkMigrationFileExistence(
-        string $migrationsPath,
-        string $table,
-        array $migrationsInfo
-    ) {
-        if (!empty($migrationFileName = glob("{$migrationsPath}/*_create_{$table}_table.php"))) {
-            array_push($migrationsInfo["tableNames"], $table);
-            array_push(
-                $migrationsInfo["migrationNames"],
-                basename($migrationFileName[0])
-            );
-        } elseif (!empty($migrationFileName = glob("{$migrationsPath}/*_create_{$table}.php"))) {
-            array_push($migrationsInfo["tableNames"], $table);
-            array_push(
-                $migrationsInfo["migrationNames"],
-                basename($migrationFileName[0])
-            );
-        }
-
-        if (!empty($migrationFileName = glob("{$migrationsPath}/*_to_{$table}_table.php"))) {
-            array_push(
-                $migrationsInfo["migrationNames"],
-                basename($migrationFileName[0])
-            );
-        }
-
-        if (!empty($migrationFileName = glob("{$migrationsPath}/*_from_{$table}_table.php"))) {
-            array_push(
-                $migrationsInfo["migrationNames"],
-                basename($migrationFileName[0])
-            );
-        }
-
-        if (!empty($migrationFileName = glob("{$migrationsPath}/*_in_{$table}_table.php"))) {
-            array_push(
-                $migrationsInfo["migrationNames"],
-                basename($migrationFileName[0])
-            );
-        }
-
-        return $migrationsInfo;
     }
 }
