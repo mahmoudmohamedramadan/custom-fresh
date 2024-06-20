@@ -128,9 +128,8 @@ class CustomFreshCommand extends Command
                 ->insert(["migration" => substr_replace($migration, "", -4), "batch" => 1]);
         }
 
-        $droppedTables = array_map("current", DB::select("SHOW TABLES"));
         $droppedTables = array_diff(
-            $droppedTables,
+            $this->getTables(),
             array_merge(array_filter($tableNames), ["migrations"])
         );
 
