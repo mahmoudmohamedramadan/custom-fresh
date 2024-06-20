@@ -63,7 +63,7 @@ class CustomFreshCommand extends Command
     }
 
     /**
-     * Get an array of all the tables in the database.
+     * Get the listed tables in the database.
      * 
      * @return array
      */
@@ -73,7 +73,7 @@ class CustomFreshCommand extends Command
     }
 
     /**
-     * Get an array of the migration file names and correct table names.
+     * Get the correct table names with their migration names.
      *
      * @param  array  $tablesToBeDropped
      * @return array
@@ -141,7 +141,7 @@ class CustomFreshCommand extends Command
     }
 
     /**
-     * Check if the given migration file exists.
+     * Get the migrations that match the given table.
      *
      * @param  string  $migrationsPath
      * @param  string  $table
