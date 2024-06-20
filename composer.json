@@ -8,8 +8,17 @@
         "migrate",
         "database",
         "refreshing",
+        "mariadb",
+        "mssql",
+        "mysql",
+        "pgsql",
+        "postgresql",
+        "oracle",
+        "pdo",
+        "queryobject",
         "sql",
-        "mysql"
+        "sqlite",
+        "sqlserver"
     ],
     "license": "MIT",
     "authors": [
@@ -22,6 +31,7 @@
     ],
     "require": {
         "php": "^8.0",
+        "doctrine/dbal": "^3.0",
         "illuminate/support": "^8.0|^9.0|^10.0|^11.0",
         "illuminate/console": "^8.0|^9.0|^10.0|^11.0",
         "illuminate/database": "^8.12|^9.0|^10.0|^11.0"
