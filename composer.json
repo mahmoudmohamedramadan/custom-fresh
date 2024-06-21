@@ -1,6 +1,6 @@
 {
     "name": "ramadan/custom-fresh",
-    "description": "A Laravel package to specify the tables that you do not want to drop while refreshing the database",
+    "description": "A Laravel package to specify the tables that you do not want to drop while refreshing the database.",
     "homepage": "https://github.com/mahmoudmohamedramadan/custom-fresh",
     "keywords": [
         "laravel",
@@ -8,21 +8,33 @@
         "migrate",
         "database",
         "refreshing",
-        "development"
+        "mariadb",
+        "mssql",
+        "mysql",
+        "pgsql",
+        "postgresql",
+        "oracle",
+        "pdo",
+        "queryobject",
+        "sql",
+        "sqlite",
+        "sqlserver"
     ],
     "license": "MIT",
     "authors": [
         {
             "name": "Mahmoud Mohamed Ramadan",
             "email": "mahmoudramadan496@gmail.com",
-            "homepage": "https://www.mmramadan.com",
+            "homepage": "https://mmramadan.com",
             "role": "Developer"
         }
     ],
     "require": {
         "php": "^8.0",
-        "illuminate/support": "^8.0|^9.0|^10.0",
-        "illuminate/console": "^8.0|^9.0|^10.0"
+        "doctrine/dbal": "^3.0",
+        "illuminate/support": "^8.0|^9.0|^10.0|^11.0",
+        "illuminate/console": "^8.0|^9.0|^10.0|^11.0",
+        "illuminate/database": "^8.12|^9.0|^10.0|^11.0"
     },
     "autoload": {
         "psr-4": {
