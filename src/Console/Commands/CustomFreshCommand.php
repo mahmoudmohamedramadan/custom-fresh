@@ -64,14 +64,11 @@ class CustomFreshCommand extends Command
      */
     protected function getDatabaseInfo(array $tablesNeededToDrop)
     {
-        // At first, we will filter the given array of tables, and then iterate over
-        // each one to check if the passed table has a migration then we will check if
-        // the `tables` has been set by the `guessDatabaseInfo` method or not
+        // At first, we will filter the given array of tables to go through each one
+        // verifying that the passed table has a migration and then, we will check if
+        // the `tables` key has been set by the `guessDatabaseInfo` method or not
         // because if it is set, it means the table is there
         // or we will ask the developer to choose the correct table instead.
-
-        // In case the table is not there, we will recall the method again
-        // to update the database info.
         foreach (array_filter($tablesNeededToDrop) as $index => $table) {
             $info = $this->guessDatabaseInfo($table);
 
@@ -87,6 +84,8 @@ class CustomFreshCommand extends Command
                     )
                 );
 
+                // In case the table is not there, we will recall the method again
+                // to update the invalid database info.
                 $info = $this->guessDatabaseInfo($value);
 
                 $database["migrations"][$index] = array_values($info["migrations"]);
@@ -116,15 +115,9 @@ class CustomFreshCommand extends Command
             array_push($database["migrations"], basename($migration[0]));
         }
 
-        if (!empty($migration = glob("{$migrationsPath}/*_to_{$table}_table.php"))) {
+        if (!empty($migration = glob("{$migrationsPath}/*_{to,from,in}_{$table}_table.php", GLOB_BRACE))) {
             array_push($database["migrations"], basename($migration[0]));
-        }
-
-        if (!empty($migration = glob("{$migrationsPath}/*_from_{$table}_table.php"))) {
-            array_push($database["migrations"], basename($migration[0]));
-        }
-
-        if (!empty($migration = glob("{$migrationsPath}/*_in_{$table}_table.php"))) {
+        } elseif (!empty($migration = glob("{$migrationsPath}/*_{to,from,in}_{$table}.php", GLOB_BRACE))) {
             array_push($database["migrations"], basename($migration[0]));
         }
 
@@ -140,6 +133,9 @@ class CustomFreshCommand extends Command
      */
     protected function dropTables(array $migrations, array $tables)
     {
+        // After we have guessed the correct table names with their migrations, we will
+        // truncate the `migrations` table and then, insert the migrations that should not
+        // be dropped to not migrate these tables.
         DB::table("migrations")->truncate();
 
         foreach ($migrations as $migration) {
