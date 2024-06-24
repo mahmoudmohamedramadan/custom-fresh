@@ -37,14 +37,7 @@ class CustomFreshCommand extends Command
             return 1;
         }
 
-        $this->components->task(
-            'Migrating your database schema',
-            fn () => $this->call('migrate', ['--force' => true])
-        );
-
         $database = $this->getDatabaseInfo(explode(",", $this->argument("table")));
-
-        $this->components->info('Preparing database.');
 
         $this->components->task('Dropping the tables', $this->dropTables(
             $this->collectMigrations($database),
