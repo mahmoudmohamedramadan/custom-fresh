@@ -19,7 +19,7 @@ Custom Fresh allows fine-grain control of migrations inside your Laravel project
 
 ## Installation
 
-You can install the package via Composer:
+Install the package by using [Composer](https://getcomposer.org/):
 
 ```SHELL
 composer require ramadan/custom-fresh
@@ -27,19 +27,19 @@ composer require ramadan/custom-fresh
 
 ## Usage
 
-After installing the package, you will now see a new `fresh:custom` command.
+After installing the package, you will see a new `fresh:custom` command.
 
 ### Refreshing migrations
 
-You can exclude specific tables while refreshing the database inside your project using:
+You can exclude specific tables while refreshing the database inside your project:
 
 ```SHELL
-php artisan fresh:custom posts,invalid_table_name
+php artisan fresh:custom posts,foo,bar
 ```
 
 ### Example
 
-![cmd](https://github.com/mahmoudmohamedramadan/custom-fresh/assets/48416569/06cc0df0-45f7-488b-b448-7ca18ffcf767 "Custom Fresh")
+![bash](https://github.com/mahmoudmohamedramadan/custom-fresh/assets/48416569/820c65fc-95e4-442c-b74c-e255d3232c63 "Custom Fresh")
 
 ## Credits
 
