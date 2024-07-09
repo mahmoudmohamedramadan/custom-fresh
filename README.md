@@ -43,7 +43,7 @@ php artisan fresh:custom posts,foo,bar
 
 ## Credits
 
-- [Mahmoud Mohamed Ramadan](https://github.com/mahmoudmohamedramadan)
+- [Mahmoud Ramadan](https://github.com/mahmoudmohamedramadan)
 - [Contributors](https://github.com/mahmoudmohamedramadan/custom-fresh/graphs/contributors)
 
 ## Support me
