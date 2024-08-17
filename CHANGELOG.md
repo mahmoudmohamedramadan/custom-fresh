@@ -1,5 +1,9 @@
 # Release Notes for 1.x
 
+## [v1.1.2](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v1.1.2) - [#9](https://github.com/mahmoudmohamedramadan/custom-fresh/pull/9)
+
+- [1.x] Improves the comments.
+
 ## [v1.1.1](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v1.1.1) - [#8](https://github.com/mahmoudmohamedramadan/custom-fresh/pull/8)
 
 - [1.x] Removes the additional components.
