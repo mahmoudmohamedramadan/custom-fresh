@@ -58,10 +58,9 @@ class CustomFreshCommand extends Command
     protected function getDatabaseInfo(array $tablesNeededToDrop)
     {
         // At first, we will filter the given array of tables to go through each one
-        // verifying that it has a migration. Then, we will check if
-        // the `tables` key has been set by the `guessDatabaseInfo` method or not
-        // because if it is set, it means the table is there
-        // or we will ask the developer to choose the correct table instead.
+        // verifying that it has a migration. Then, we will check if the `tables` key
+        // has been set by the `guessDatabaseInfo` method because if it is not set,
+        // we will ask the developer to choose the correct table instead.
         foreach (array_filter($tablesNeededToDrop) as $index => $table) {
             $info = $this->guessDatabaseInfo($table);
 
