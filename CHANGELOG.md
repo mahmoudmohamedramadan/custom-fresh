@@ -27,7 +27,7 @@
 - [1.x] Updates the DocBlocks.
 - [1.x] Refactoring the code.
 
-## [v1.0.7](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v1.0.7) - [#1](https://github.com/mahmoudmohamedramadan/custom-fresh/pull/1)
+## [v1.0.8 (alpha.1)](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v1.0.8-alpha.1) - [#1](https://github.com/mahmoudmohamedramadan/custom-fresh/pull/1)
 
 - [1.x] Fixes the issue of retrieving a list of tables in different databases.
 - [1.x] Adds new `packages` in the composer require list.
