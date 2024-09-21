@@ -39,7 +39,7 @@ php artisan fresh:custom posts,foo,bar
 
 ### Example
 
-![bash](https://github.com/mahmoudmohamedramadan/custom-fresh/assets/48416569/820c65fc-95e4-442c-b74c-e255d3232c63 "Custom Fresh")
+![Command Example](https://github.com/mahmoudmohamedramadan/custom-fresh/assets/48416569/820c65fc-95e4-442c-b74c-e255d3232c63 "Command Example")
 
 ## Credits
 
