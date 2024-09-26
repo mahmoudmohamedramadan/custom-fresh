@@ -23,7 +23,7 @@
     "license": "MIT",
     "authors": [
         {
-            "name": "Mahmoud Mohamed Ramadan",
+            "name": "Mahmoud Ramadan",
             "email": "mahmoudramadan496@gmail.com",
             "homepage": "https://mmramadan.com",
             "role": "Developer"
@@ -33,8 +33,7 @@
         "php": "^8.0",
         "doctrine/dbal": "^3.0",
         "illuminate/support": "^8.0|^9.0|^10.0|^11.0",
-        "illuminate/console": "^8.0|^9.0|^10.0|^11.0",
-        "illuminate/database": "^8.12|^9.0|^10.0|^11.0"
+        "illuminate/console": "^8.0|^9.0|^10.0|^11.0"
     },
     "autoload": {
         "psr-4": {
@@ -52,11 +51,19 @@
     "funding": [
         {
             "type": "github",
-            "url": "https://github.com/mahmoudmohamedramadan/custom-fresh#support-me"
+            "url": "https://github.com/sponsors/mahmoudmohamedramadan"
         },
         {
-            "type": "other",
-            "url": "https://blog.mmramadan.com/support-me"
+            "type": "paypal",
+            "url": "https://www.paypal.com/paypalme/mmramadan496"
+        },
+        {
+            "type": "buymeacoffee",
+            "url": "https://buymeacoffee.com/mmramadan496"
+        },
+        {
+            "type": "patreon",
+            "url": "https://www.patreon.com/mmramadan496"
         }
     ]
 }
