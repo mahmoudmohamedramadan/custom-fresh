@@ -2,7 +2,9 @@
 
 ## [v1.1.3](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v1.1.3)
 
-- [1.x] Update the `composer.json` file.
+- [1.x] Updates the `authors` object.
+- [1.x] Removes the `illuminate/database` from the `require` object.
+- [1.x] Updates the `funding` object.
 
 ## [v1.1.2](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v1.1.2) - [#9](https://github.com/mahmoudmohamedramadan/custom-fresh/pull/9)
 
