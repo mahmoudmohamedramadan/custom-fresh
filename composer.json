@@ -48,6 +48,7 @@
         }
     },
     "minimum-stability": "dev",
+    "prefer-stable": true,
     "funding": [
         {
             "type": "github",
