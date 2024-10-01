@@ -1,6 +1,6 @@
 # Custom Fresh
 
-![Custom Fresh](https://github.com/mahmoudmohamedramadan/custom-fresh/assets/48416569/d6c582d8-72c9-4029-81d9-06e5d57fc98f "Custom Fresh")
+![Custom Fresh](https://raw.githubusercontent.com/mahmoudmohamedramadan/custom-fresh/refs/heads/main/assets/custom-fresh.png "Custom Fresh")
 
 ![License](https://img.shields.io/packagist/l/ramadan/custom-fresh "License")
 ![Latest Version on Packagist](https://img.shields.io/packagist/v/ramadan/custom-fresh "Latest Version on Packagist")
@@ -39,7 +39,7 @@ php artisan fresh:custom posts,foo,bar
 
 ### Example
 
-![Command Example](https://github.com/mahmoudmohamedramadan/custom-fresh/assets/48416569/820c65fc-95e4-442c-b74c-e255d3232c63 "Command Example")
+![Command Example](https://raw.githubusercontent.com/mahmoudmohamedramadan/custom-fresh/refs/heads/main/assets/command-example.png "Command Example")
 
 ## Credits
 
