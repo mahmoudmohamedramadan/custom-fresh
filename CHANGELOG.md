@@ -46,6 +46,7 @@
 ## [v1.0.8 (alpha.1)](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v1.0.8-alpha.1) - [#1](https://github.com/mahmoudmohamedramadan/custom-fresh/pull/1)
 
 - [1.x] Fixes the issue of retrieving a list of tables in different databases.
-- [1.x] Adds the `doctrine/dbal` and `illuminate/database` in the composer `require` key.
+- [1.x] Adds the `doctrine/dbal` to the `require` key.
+- [1.x] Adds the `illuminate/database` to the `require` key.
 - [1.x] Upgrades the `require` key list.
 - [1.x] Refactoring the code.
