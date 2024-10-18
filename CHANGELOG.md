@@ -3,14 +3,14 @@
 ## [v1.1.4](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v1.1.4)
 
 - [1.x] Updates the approach of getting the database tables.
-- [1.x] Adds `laravel/framework` package to the `require` list.
-- [1.x] Removes the `doctrine/dbal` package from the `require` list.
+- [1.x] Adds `laravel/framework` package to the `require` key.
+- [1.x] Removes the `doctrine/dbal` package from the `require` key.
 
 ## [v1.1.3](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v1.1.3)
 
-- [1.x] Updates the `authors` object.
-- [1.x] Removes the `illuminate/database` from the `require` object.
-- [1.x] Updates the `funding` object.
+- [1.x] Updates the `authors` key.
+- [1.x] Removes the `illuminate/database` from the `require` key.
+- [1.x] Updates the `funding` key.
 
 ## [v1.1.2](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v1.1.2) - [#9](https://github.com/mahmoudmohamedramadan/custom-fresh/pull/9)
 
@@ -42,6 +42,6 @@
 ## [v1.0.8 (alpha.1)](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v1.0.8-alpha.1) - [#1](https://github.com/mahmoudmohamedramadan/custom-fresh/pull/1)
 
 - [1.x] Fixes the issue of retrieving a list of tables in different databases.
-- [1.x] Adds new `packages` in the composer require list.
+- [1.x] Adds a new packages in the composer `require` key.
 - [1.x] Upgrades the existing packages.
 - [1.x] Refactoring the code.
