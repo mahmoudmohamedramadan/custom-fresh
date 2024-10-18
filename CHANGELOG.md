@@ -1,5 +1,11 @@
 # Release Notes for 1.x
 
+## [v1.1.4](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v1.1.4)
+
+- [1.x] Updates the approach of getting the database tables.
+- [1.x] Adds `laravel/framework` package to the `require` list.
+- [1.x] Removes the `doctrine/dbal` package from the `require` list.
+
 ## [v1.1.3](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v1.1.3)
 
 - [1.x] Updates the `authors` object.
