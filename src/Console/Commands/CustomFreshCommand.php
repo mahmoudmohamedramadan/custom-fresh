@@ -27,6 +27,42 @@ class CustomFreshCommand extends Command
     protected $description = 'Create exceptions for the given table names while refreshing the database';
 
     /**
+     * The database connection instance.
+     *
+     * @var \Illuminate\Database\Connection
+     */
+    protected $connection;
+
+    /**
+     * The schema grammar instance.
+     *
+     * @var \Illuminate\Database\Schema\Grammars\Grammar
+     */
+    protected $grammar;
+
+    /**
+     * The database tables.
+     *
+     * @var array
+     */
+    protected $tables;
+
+    /**
+     * Create a new custom fresh command instance.
+     *
+     * @return void
+     */
+    public function __construct()
+    {
+        parent::__construct();
+
+        $this->connection = Schema::getConnection();
+        $this->grammar    = $this->connection->getSchemaGrammar();
+
+        $this->tables = array_column($this->processTables(), "name");
+    }
+
+    /**
      * Execute the console command.
      *
      * @return int
@@ -147,13 +183,25 @@ class CustomFreshCommand extends Command
     }
 
     /**
+     * Process the results of a tables query.
+     *
+     * @return array
+     */
+    protected function processTables()
+    {
+        return $this->connection->getPostProcessor()->processTables(
+            $this->connection->selectFromWriteConnection($this->grammar->compileTables($this->connection->getDatabaseName()))
+        );
+    }
+
+    /**
      * Get all listed tables in the database.
      *
      * @return array
      */
     protected function getTables()
     {
-        return DB::connection()->getDoctrineSchemaManager()->listTableNames();
+        return $this->tables;
     }
 
     /**
