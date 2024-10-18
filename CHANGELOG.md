@@ -3,8 +3,12 @@
 ## [v1.1.4](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v1.1.4)
 
 - [1.x] Updates the approach of getting the database tables.
-- [1.x] Adds the `laravel/framework` package to the `require` key.
-- [1.x] Removes the `doctrine/dbal` package from the `require` key.
+- [1.x] Fixes the compatibility issue between `Laravel-v.11` and `Doctrine`.
+- [1.x] Adds the `laravel/framework` to the `require` key.
+- [1.x] Adds the `ext-pdo` to the `require` key.
+- [1.x] Removes the `doctrine/dbal` from the `require` key.
+- [1.x] Removes the `illuminate/support` from the `require` key.
+- [1.x] Removes the `illuminate/console` from the `require` key.
 
 ## [v1.1.3](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v1.1.3)
 
@@ -42,6 +46,6 @@
 ## [v1.0.8 (alpha.1)](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v1.0.8-alpha.1) - [#1](https://github.com/mahmoudmohamedramadan/custom-fresh/pull/1)
 
 - [1.x] Fixes the issue of retrieving a list of tables in different databases.
-- [1.x] Adds a new packages in the composer `require` key.
-- [1.x] Upgrades the existing packages.
+- [1.x] Adds the `doctrine/dbal` and `illuminate/database` in the composer `require` key.
+- [1.x] Upgrades the `require` key list.
 - [1.x] Refactoring the code.
