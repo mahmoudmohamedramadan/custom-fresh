@@ -176,10 +176,10 @@ class CustomFreshCommand extends Command
         );
 
         Schema::disableForeignKeyConstraints();
-
         foreach ($tablesShouldBeDropped as $table) {
             Schema::dropIfExists($table);
         }
+        Schema::enableForeignKeyConstraints();
     }
 
     /**
@@ -195,7 +195,7 @@ class CustomFreshCommand extends Command
     }
 
     /**
-     * Get all listed tables in the database.
+     * Get all listed database tables.
      *
      * @return array
      */
