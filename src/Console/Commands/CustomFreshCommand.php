@@ -190,7 +190,9 @@ class CustomFreshCommand extends Command
     protected function processTables()
     {
         return $this->connection->getPostProcessor()->processTables(
-            $this->connection->selectFromWriteConnection($this->grammar->compileTables($this->connection->getDatabaseName()))
+            $this->connection->selectFromWriteConnection(
+                $this->grammar->compileTables($this->connection->getDatabaseName())
+            )
         );
     }
 
