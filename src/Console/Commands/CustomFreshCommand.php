@@ -94,8 +94,8 @@ class CustomFreshCommand extends Command
     protected function getDatabaseInfo(array $tablesNeededToDrop)
     {
         // At first, we will filter the given array of tables to go through each one
-        // verifying that it has a migration. Then, we will check if the `tables` key
-        // has been set by the `guessDatabaseInfo` method because if it is not set,
+        // verifying that it has a migration. Then, we will check if the "tables key
+        // has been set by the "guessDatabaseInfo method because if it is not set,
         // we will ask the developer to choose the correct table instead.
         foreach (array_filter($tablesNeededToDrop) as $index => $table) {
             $info = $this->guessDatabaseInfo($table);
@@ -153,7 +153,7 @@ class CustomFreshCommand extends Command
 
     /**
      * Reassess the database info when the table does not have its migration.
-     * For instance, the "sessions" table is migrated with the "users" migration file in Laravel v.11.
+     * For instance, the "sessions" table is migrated with the "users" migration file in Laravel-v.11.
      *
      * @param  array  $info
      * @param  string  $table
@@ -183,7 +183,7 @@ class CustomFreshCommand extends Command
     protected function dropTables(array $migrations, array $tables)
     {
         // After we have guessed the correct table names with their migrations, we will
-        // truncate the `migrations` table and then, insert the migrations that should not
+        // truncate the "migrations" table and then, insert the migrations that should not
         // be dropped to not migrate these tables.
         DB::table("migrations")->truncate();
 
