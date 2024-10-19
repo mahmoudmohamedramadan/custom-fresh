@@ -76,7 +76,7 @@ class CustomFreshCommand extends Command
         $database = $this->getDatabaseInfo(explode(",", $this->argument("table")));
 
         $this->components->task('Dropping the tables', $this->dropTables(
-            $this->collectMigrations($database),
+            array_filter($this->collectMigrations($database)),
             $this->collectTables($database)
         ));
 
@@ -113,7 +113,7 @@ class CustomFreshCommand extends Command
                 );
 
                 // We will re-invoke the method to update the invalid database info.
-                $info = $this->guessDatabaseInfo($value);
+                $info = $this->reassessDatabaseInfo($this->guessDatabaseInfo($value), $value);
 
                 $database["migrations"][$index] = array_values($info["migrations"]);
                 $database["tables"][$index]     = array_values($info["tables"]);
@@ -149,6 +149,28 @@ class CustomFreshCommand extends Command
         }
 
         return $database;
+    }
+
+    /**
+     * Reassess the database info when the table does not have its migration.
+     * For instance, the "sessions" table is migrated with the "users" migration file in Laravel v.11.
+     *
+     * @param  array  $info
+     * @param  string  $table
+     * @return array
+     */
+    protected function reassessDatabaseInfo(array $info, string $table)
+    {
+        if (!empty($info["migrations"]) && !empty($info["tables"])) {
+            return $info;
+        }
+
+        if (in_array($table, $this->getTables())) {
+            array_push($info["migrations"], null);
+            array_push($info["tables"], $table);
+        }
+
+        return $info;
     }
 
     /**
