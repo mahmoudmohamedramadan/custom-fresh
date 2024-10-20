@@ -73,11 +73,11 @@ class CustomFreshCommand extends Command
             return 1;
         }
 
-        $database = $this->getDatabaseInfo(explode(",", $this->argument("table")));
+        $database = $this->getMigrationsWithTableNames(explode(",", $this->argument("table")));
 
         $this->components->task('Dropping the tables', $this->dropTables(
             array_filter($this->collectMigrations($database)),
-            $this->collectTables($database)
+            array_filter($this->collectTables($database))
         ));
 
         $this->call('migrate', ['--force' => true]);
@@ -86,22 +86,22 @@ class CustomFreshCommand extends Command
     }
 
     /**
-     * Get the correct table names with their migrations.
+     * Get the migrations with their correct table names.
      *
      * @param  array  $tablesNeededToDrop
      * @return array
      */
-    protected function getDatabaseInfo(array $tablesNeededToDrop)
+    protected function getMigrationsWithTableNames(array $tablesNeededToDrop)
     {
         // At first, we will filter the given array of tables to go through each one
-        // verifying that it has a migration. Then, we will check if the "tables key
-        // has been set by the "guessDatabaseInfo method because if it is not set,
+        // verifying that it has a migration. Then, we will check if the "tables" key
+        // has been set by the "guessDatabaseDetails" method because if it is not set,
         // we will ask the developer to choose the correct table instead.
         foreach (array_filter($tablesNeededToDrop) as $index => $table) {
-            $info = $this->guessDatabaseInfo($table);
+            $details = $this->guessDatabaseDetails($table);
 
-            $database["migrations"][] = array_values($info["migrations"]);
-            $database["tables"][]     = array_values($info["tables"]);
+            $database["migrations"][] = array_values($details["migrations"]);
+            $database["tables"][]     = array_values($details["tables"]);
 
             if (empty($database["tables"][$index])) {
                 $value = $this->choice(
@@ -112,11 +112,11 @@ class CustomFreshCommand extends Command
                     )
                 );
 
-                // We will re-invoke the method to update the invalid database info.
-                $info = $this->reassessDatabaseInfo($this->guessDatabaseInfo($value), $value);
+                // We will re-invoke the method to update the invalid database details.
+                $details = $this->reassessDatabaseDetails($this->guessDatabaseDetails($value), $value);
 
-                $database["migrations"][$index] = array_values($info["migrations"]);
-                $database["tables"][$index]     = array_values($info["tables"]);
+                $database["migrations"][$index] = array_values($details["migrations"]);
+                $database["tables"][$index]     = array_values($details["tables"]);
             }
         }
 
@@ -124,12 +124,12 @@ class CustomFreshCommand extends Command
     }
 
     /**
-     * Try to guess the database info based on the table name.
+     * Try to guess the database details based on the table name.
      *
      * @param  string  $table
      * @return array
      */
-    protected function guessDatabaseInfo(string $table)
+    protected function guessDatabaseDetails(string $table)
     {
         $migrationsPath = database_path('migrations');
         $database       = ["migrations" => [], "tables" => []];
@@ -152,25 +152,23 @@ class CustomFreshCommand extends Command
     }
 
     /**
-     * Reassess the database info when the table does not have its migration.
-     * For instance, the "sessions" table is migrated with the "users" migration file in Laravel-v.11.
+     * Reassess the database details when the table does not have its migration.
+     * For instance, the "sessions" table is migrated within the "users" migration file in Laravel v11.
      *
-     * @param  array  $info
+     * @param  array  $database
      * @param  string  $table
      * @return array
      */
-    protected function reassessDatabaseInfo(array $info, string $table)
+    protected function reassessDatabaseDetails(array $database, string $table)
     {
-        if (!empty($info["migrations"]) && !empty($info["tables"])) {
-            return $info;
+        if (!empty($database["migrations"]) && !empty($database["tables"])) {
+            return $database;
         }
 
-        if (in_array($table, $this->getTables())) {
-            array_push($info["migrations"], null);
-            array_push($info["tables"], $table);
-        }
+        array_push($database["migrations"], null);
+        array_push($database["tables"], $table);
 
-        return $info;
+        return $database;
     }
 
     /**
@@ -194,7 +192,7 @@ class CustomFreshCommand extends Command
 
         $tablesShouldBeDropped = array_diff(
             $this->getTables(),
-            array_merge(array_filter($tables), ["migrations"])
+            array_merge($tables, ["migrations"])
         );
 
         Schema::disableForeignKeyConstraints();
