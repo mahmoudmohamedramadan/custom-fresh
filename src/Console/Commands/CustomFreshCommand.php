@@ -134,17 +134,18 @@ class CustomFreshCommand extends Command
         $migrationsPath = database_path('migrations');
         $database       = ["migrations" => [], "tables" => []];
 
-        if (!empty($migration = glob("{$migrationsPath}/*_create_{$table}_table.php"))) {
-            array_push($database["tables"], $table);
-            array_push($database["migrations"], basename($migration[0]));
-        } elseif (!empty($migration = glob("{$migrationsPath}/*_create_{$table}.php"))) {
+        if (
+            !empty($migration = glob("{$migrationsPath}/*_create_{$table}_table.php")) ||
+            !empty($migration = glob("{$migrationsPath}/*_create_{$table}.php"))
+        ) {
             array_push($database["tables"], $table);
             array_push($database["migrations"], basename($migration[0]));
         }
 
-        if (!empty($migration = glob("{$migrationsPath}/*_{to,from,in}_{$table}_table.php", GLOB_BRACE))) {
-            array_push($database["migrations"], basename($migration[0]));
-        } elseif (!empty($migration = glob("{$migrationsPath}/*_{to,from,in}_{$table}.php", GLOB_BRACE))) {
+        if (
+            !empty($migration = glob("{$migrationsPath}/*_{to,from,in}_{$table}_table.php", GLOB_BRACE)) ||
+            !empty($migration = glob("{$migrationsPath}/*_{to,from,in}_{$table}.php", GLOB_BRACE))
+        ) {
             array_push($database["migrations"], basename($migration[0]));
         }
 
