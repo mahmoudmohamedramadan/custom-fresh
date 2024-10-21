@@ -95,13 +95,13 @@ class CustomFreshCommand extends Command
     {
         // At first, we will filter the given array of tables to go through each one
         // verifying that it has a migration. Then, we will check if the "tables" key
-        // has been set by the "guessDatabaseDetails" method because if it is not set,
+        // has been set by the "getDatabaseMapping" method because if it is not set,
         // we will ask the developer to choose the correct table instead.
         foreach (array_filter($tablesNeededToDrop) as $index => $table) {
-            $details = $this->guessDatabaseDetails($table);
+            $mapping = $this->getDatabaseMapping($table);
 
-            $database["migrations"][] = array_values($details["migrations"]);
-            $database["tables"][]     = array_values($details["tables"]);
+            $database["migrations"][] = array_values($mapping["migrations"]);
+            $database["tables"][]     = array_values($mapping["tables"]);
 
             if (empty($database["tables"][$index])) {
                 $value = $this->choice(
@@ -113,10 +113,10 @@ class CustomFreshCommand extends Command
                 );
 
                 // We will re-invoke the method to update the invalid database details.
-                $details = $this->reassessDatabaseDetails($this->guessDatabaseDetails($value), $value);
+                $mapping = $this->finalizeDatabaseMapping($this->getDatabaseMapping($value), $value);
 
-                $database["migrations"][$index] = array_values($details["migrations"]);
-                $database["tables"][$index]     = array_values($details["tables"]);
+                $database["migrations"][$index] = array_values($mapping["migrations"]);
+                $database["tables"][$index]     = array_values($mapping["tables"]);
             }
         }
 
@@ -124,12 +124,12 @@ class CustomFreshCommand extends Command
     }
 
     /**
-     * Try to guess the database details based on the table name.
+     * Get a database map of the given table name and its migrations.
      *
      * @param  string  $table
      * @return array
      */
-    protected function guessDatabaseDetails(string $table)
+    protected function getDatabaseMapping(string $table)
     {
         $migrationsPath = database_path('migrations');
         $database       = ["migrations" => [], "tables" => []];
@@ -153,14 +153,14 @@ class CustomFreshCommand extends Command
     }
 
     /**
-     * Reassess the database details when the table does not have its migration.
+     * Get a final database map of the given table when it does not have its migration.
      * For instance, the "sessions" table is migrated within the "users" migration file in Laravel v11.
      *
      * @param  array  $database
      * @param  string  $table
      * @return array
      */
-    protected function reassessDatabaseDetails(array $database, string $table)
+    protected function finalizeDatabaseMapping(array $database, string $table)
     {
         if (!empty($database["migrations"]) && !empty($database["tables"])) {
             return $database;
@@ -181,7 +181,7 @@ class CustomFreshCommand extends Command
      */
     protected function dropTables(array $migrations, array $tables)
     {
-        // After we have guessed the correct table names with their migrations, we will
+        // After we have mapped the correct table names with their migrations, we will
         // truncate the "migrations" table and then, insert the migrations that should not
         // be dropped to not migrate these tables.
         DB::table("migrations")->truncate();
