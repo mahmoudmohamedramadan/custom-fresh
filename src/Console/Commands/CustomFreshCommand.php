@@ -169,7 +169,7 @@ class CustomFreshCommand extends Command
     }
 
     /**
-     * Truncate the migrations table.
+     * Truncate the "migrations" table.
      *
      * @return void
      */
