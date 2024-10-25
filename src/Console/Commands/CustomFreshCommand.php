@@ -48,6 +48,13 @@ class CustomFreshCommand extends Command
     protected $tables;
 
     /**
+     * The database tables that own migration files.
+     *
+     * @var array
+     */
+    protected $tablesOwnMigration;
+
+    /**
      * Create a new custom fresh command instance.
      *
      * @return void
@@ -60,6 +67,11 @@ class CustomFreshCommand extends Command
         $this->grammar    = $this->connection->getSchemaGrammar();
 
         $this->tables = array_column($this->processTables(), "name");
+
+        // We will check for the existence of migrations to only show the tables that own migration files
+        // fading away the issue of skip dropping a table and re-migrate it which leads to throwing an exception
+        // For instance, the "sessions" table does not have a migration in Laravel v.11.
+        $this->tablesOwnMigration = $this->tablesOwnMigration($this->getTables());
     }
 
     /**
@@ -107,13 +119,13 @@ class CustomFreshCommand extends Command
                 $value = $this->choice(
                     "Choose the correct table instead ({$table})",
                     array_diff(
-                        $this->getTables(),
+                        $this->getTablesOwnMigration(),
                         array_merge($this->collectTables($database), ["migrations"])
                     )
                 );
 
                 // We will re-invoke the method to update the invalid database details.
-                $mapping = $this->finalizeDatabaseMapping($this->getDatabaseMapping($value), $value);
+                $mapping = $this->getDatabaseMapping($value);
 
                 $database["migrations"][$index] = array_values($mapping["migrations"]);
                 $database["tables"][$index]     = array_values($mapping["tables"]);
@@ -228,6 +240,16 @@ class CustomFreshCommand extends Command
     }
 
     /**
+     * Get the database tables that own migration files.
+     *
+     * @return array
+     */
+    protected function getTablesOwnMigration()
+    {
+        return $this->tablesOwnMigration;
+    }
+
+    /**
      * Get the listed tables that should not be dropped.
      *
      * @param  array  $database
@@ -253,5 +275,18 @@ class CustomFreshCommand extends Command
 
             return array_merge($carry, [$migration]);
         }, []);
+    }
+
+    /**
+     * Filter the given array of tables to only those that own migrations.
+     *
+     * @param  array  $tables
+     * @return array
+     */
+    protected function tablesOwnMigration(array $tables)
+    {
+        return array_values(array_filter($tables, function ($table) {
+            return !empty($this->getDatabaseMapping($table)["migrations"]);
+        }));
     }
 }
