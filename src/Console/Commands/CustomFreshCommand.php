@@ -66,10 +66,10 @@ class CustomFreshCommand extends Command
         $this->connection = Schema::getConnection();
         $this->grammar    = $this->connection->getSchemaGrammar();
 
-        $this->tables = array_column($this->processTables(), "name");
+        $this->tables = $this->extractTableNames($this->processTables(), "name");
 
-        // We will check for the existence of migrations to only show the tables that own migration files,
-        // fading away the issue of skip dropping a table and re-migrate it which leads to throwing an exception
+        // We will only show the tables that own migration files, fading away the issue of skip-dropping a
+        // table and re-migrating it within a specific migration file, which leads to throwing an exception
         // For instance, the "sessions" table does not have a migration in Laravel v.11.
         $this->tablesOwningMigrations = $this->filterTablesOwningMigrations($this->getTables());
     }
@@ -87,13 +87,13 @@ class CustomFreshCommand extends Command
 
         $databaseMap = $this->getDatabaseMap(explode(",", $this->argument("table")));
 
-        $migrations = array_filter($this->collectMigrations($databaseMap));
-        $tables     = array_filter($this->collectTables($databaseMap));
+        $migrations = array_filter($this->flattenMigrations($databaseMap["migrations"]));
+        $tables     = array_filter($this->extractTableNames($databaseMap["tables"]));
 
         $this->components->task('Dropping the tables', function () use ($migrations, $tables) {
             $this->truncateMigrationsTable();
             $this->insertMigrations($migrations);
-            $this->dropUnrelatedTables($tables);
+            $this->dropUnmanagedTables($tables);
         });
 
         $this->call('migrate', ['--force' => true]);
@@ -124,7 +124,7 @@ class CustomFreshCommand extends Command
                     "Choose the correct table instead ({$table})",
                     array_diff(
                         $this->getTablesOwningMigrations(),
-                        array_merge($this->collectTables($databaseMap), ["migrations"])
+                        array_merge($this->extractTableNames($databaseMap["tables"]), ["migrations"])
                     )
                 );
 
@@ -199,7 +199,7 @@ class CustomFreshCommand extends Command
      * @param  array  $tables
      * @return void
      */
-    protected function dropUnrelatedTables(array $tables)
+    protected function dropUnmanagedTables(array $tables)
     {
         // We will get all database tables including the ones that do not own migration files,
         // to eliminate the issue of migrating a table that already exists in the database.
@@ -247,25 +247,26 @@ class CustomFreshCommand extends Command
     }
 
     /**
-     * Get the listed tables that should not be dropped.
+     * Extract the table names from the array using the given column key.
      *
-     * @param  array  $databaseMap
+     * @param  array  $tables
+     * @param  string|int  $columnKey
      * @return array
      */
-    protected function collectTables(array $databaseMap)
+    protected function extractTableNames(array $tables, string|int $columnKey = 0)
     {
-        return array_column($databaseMap["tables"], 0);
+        return array_column($tables, $columnKey);
     }
 
     /**
-     * Get the listed migrations that should not be dropped.
+     * Flatten the migrations from the database map.
      *
-     * @param  array  $databaseMap
+     * @param  array  $migrations
      * @return array
      */
-    protected function collectMigrations(array $databaseMap)
+    protected function flattenMigrations(array $migrations)
     {
-        return array_reduce($databaseMap["migrations"], function ($carry, $migration) {
+        return array_reduce($migrations, function ($carry, $migration) {
             if (is_array($migration)) {
                 return array_merge($carry, $migration);
             }
