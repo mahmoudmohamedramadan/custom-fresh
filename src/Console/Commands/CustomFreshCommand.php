@@ -52,7 +52,7 @@ class CustomFreshCommand extends Command
      *
      * @var array
      */
-    protected $tablesOwnMigration;
+    protected $tablesOwningMigrations;
 
     /**
      * Create a new custom fresh command instance.
@@ -68,10 +68,10 @@ class CustomFreshCommand extends Command
 
         $this->tables = array_column($this->processTables(), "name");
 
-        // We will check for the existence of migrations to only show the tables that own migration files
+        // We will check for the existence of migrations to only show the tables that own migration files,
         // fading away the issue of skip dropping a table and re-migrate it which leads to throwing an exception
         // For instance, the "sessions" table does not have a migration in Laravel v.11.
-        $this->tablesOwnMigration = $this->tablesOwnMigration($this->getTables());
+        $this->tablesOwningMigrations = $this->filterTablesOwningMigrations($this->getTables());
     }
 
     /**
@@ -85,12 +85,16 @@ class CustomFreshCommand extends Command
             return 1;
         }
 
-        $database = $this->getMigrationsWithTableNames(explode(",", $this->argument("table")));
+        $databaseMap = $this->getDatabaseMap(explode(",", $this->argument("table")));
 
-        $this->components->task('Dropping the tables', $this->dropTables(
-            array_filter($this->collectMigrations($database)),
-            array_filter($this->collectTables($database))
-        ));
+        $migrations = array_filter($this->collectMigrations($databaseMap));
+        $tables     = array_filter($this->collectTables($databaseMap));
+
+        $this->components->task('Dropping the tables', function () use ($migrations, $tables) {
+            $this->truncateMigrationsTable();
+            $this->insertMigrations($migrations);
+            $this->dropUnrelatedTables($tables);
+        });
 
         $this->call('migrate', ['--force' => true]);
 
@@ -103,110 +107,103 @@ class CustomFreshCommand extends Command
      * @param  array  $tablesNeededToDrop
      * @return array
      */
-    protected function getMigrationsWithTableNames(array $tablesNeededToDrop)
+    protected function getDatabaseMap(array $tablesNeededToDrop)
     {
         // At first, we will filter the given array of tables to go through each one
         // verifying that it has a migration. Then, we will check if the "tables" key
-        // has been set by the "getDatabaseMapping" method because if it is not set,
+        // has been set by the "guessTableMigrations" method because if it is not set,
         // we will ask the developer to choose the correct table instead.
         foreach (array_filter($tablesNeededToDrop) as $index => $table) {
-            $mapping = $this->getDatabaseMapping($table);
+            $migrationsMap = $this->guessTableMigrations($table);
 
-            $database["migrations"][] = array_values($mapping["migrations"]);
-            $database["tables"][]     = array_values($mapping["tables"]);
+            $databaseMap["migrations"][] = array_values($migrationsMap["migrations"]);
+            $databaseMap["tables"][]     = array_values($migrationsMap["tables"]);
 
-            if (empty($database["tables"][$index])) {
+            if (empty($databaseMap["tables"][$index])) {
                 $value = $this->choice(
                     "Choose the correct table instead ({$table})",
                     array_diff(
-                        $this->getTablesOwnMigration(),
-                        array_merge($this->collectTables($database), ["migrations"])
+                        $this->getTablesOwningMigrations(),
+                        array_merge($this->collectTables($databaseMap), ["migrations"])
                     )
                 );
 
                 // We will re-invoke the method to update the invalid database details.
-                $mapping = $this->getDatabaseMapping($value);
+                $migrationsMap = $this->guessTableMigrations($value);
 
-                $database["migrations"][$index] = array_values($mapping["migrations"]);
-                $database["tables"][$index]     = array_values($mapping["tables"]);
+                $databaseMap["migrations"][$index] = array_values($migrationsMap["migrations"]);
+                $databaseMap["tables"][$index]     = array_values($migrationsMap["tables"]);
             }
         }
 
-        return $database;
+        return $databaseMap;
     }
 
     /**
-     * Get a database map of the given table name and its migrations.
+     * Guess the migrations of the given table name.
      *
      * @param  string  $table
      * @return array
      */
-    protected function getDatabaseMapping(string $table)
+    protected function guessTableMigrations(string $table)
     {
         $migrationsPath = database_path('migrations');
-        $database       = ["migrations" => [], "tables" => []];
+        $migrationsMap  = ["migrations" => [], "tables" => []];
 
         if (
             !empty($migration = glob("{$migrationsPath}/*_create_{$table}_table.php")) ||
             !empty($migration = glob("{$migrationsPath}/*_create_{$table}.php"))
         ) {
-            array_push($database["tables"], $table);
-            array_push($database["migrations"], basename($migration[0]));
+            array_push($migrationsMap["tables"], $table);
+            array_push($migrationsMap["migrations"], basename($migration[0]));
         }
 
         if (
             !empty($migration = glob("{$migrationsPath}/*_{to,from,in}_{$table}_table.php", GLOB_BRACE)) ||
             !empty($migration = glob("{$migrationsPath}/*_{to,from,in}_{$table}.php", GLOB_BRACE))
         ) {
-            array_push($database["migrations"], basename($migration[0]));
+            array_push($migrationsMap["migrations"], basename($migration[0]));
         }
 
-        return $database;
+        return $migrationsMap;
     }
 
     /**
-     * Get a final database map of the given table when it does not have its migration.
-     * For instance, the "sessions" table is migrated within the "users" migration file in Laravel v11.
+     * Truncate the migrations table.
      *
-     * @param  array  $database
-     * @param  string  $table
-     * @return array
+     * @return void
      */
-    protected function finalizeDatabaseMapping(array $database, string $table)
+    protected function truncateMigrationsTable()
     {
-        if (!empty($database["migrations"]) && !empty($database["tables"])) {
-            return $database;
-        }
+        DB::table("migrations")->truncate();
+    }
 
-        array_push($database["migrations"], null);
-        array_push($database["tables"], $table);
+    /**
+     * Insert the given migrations into the "migrations" table.
+     *
+     * @param  array  $migrations
+     * @return void
+     */
+    public function insertMigrations(array $migrations)
+    {
+        $migrationData = array_map(function ($migration) {
+            return ["migration" => substr($migration, 0, -4), "batch" => 1];
+        }, $migrations);
 
-        return $database;
+        DB::table("migrations")->insert($migrationData);
     }
 
     /**
      * Drop all tables except the given array of table names.
      *
-     * @param  array  $migrations
      * @param  array  $tables
      * @return void
      */
-    protected function dropTables(array $migrations, array $tables)
+    protected function dropUnrelatedTables(array $tables)
     {
-        // After we have mapped the correct table names with their migrations, we will
-        // truncate the "migrations" table and then, insert the migrations that should not
-        // be dropped to not migrate these tables.
-        DB::table("migrations")->truncate();
-
-        foreach ($migrations as $migration) {
-            DB::table("migrations")
-                ->insert(["migration" => substr_replace($migration, "", -4), "batch" => 1]);
-        }
-
-        $tablesShouldBeDropped = array_diff(
-            $this->getTables(),
-            array_merge($tables, ["migrations"])
-        );
+        // We will get all database tables including the ones that do not own migration files,
+        // to eliminate the issue of migrating a table that already exists in the database.
+        $tablesShouldBeDropped = array_diff($this->getTables(), array_merge($tables, ["migrations"]));
 
         Schema::disableForeignKeyConstraints();
         foreach ($tablesShouldBeDropped as $table) {
@@ -244,31 +241,31 @@ class CustomFreshCommand extends Command
      *
      * @return array
      */
-    protected function getTablesOwnMigration()
+    protected function getTablesOwningMigrations()
     {
-        return $this->tablesOwnMigration;
+        return $this->tablesOwningMigrations;
     }
 
     /**
      * Get the listed tables that should not be dropped.
      *
-     * @param  array  $database
+     * @param  array  $databaseMap
      * @return array
      */
-    protected function collectTables(array $database)
+    protected function collectTables(array $databaseMap)
     {
-        return array_column($database["tables"], 0);
+        return array_column($databaseMap["tables"], 0);
     }
 
     /**
      * Get the listed migrations that should not be dropped.
      *
-     * @param  array  $database
+     * @param  array  $databaseMap
      * @return array
      */
-    protected function collectMigrations(array $database)
+    protected function collectMigrations(array $databaseMap)
     {
-        return array_reduce($database["migrations"], function ($carry, $migration) {
+        return array_reduce($databaseMap["migrations"], function ($carry, $migration) {
             if (is_array($migration)) {
                 return array_merge($carry, $migration);
             }
@@ -278,15 +275,15 @@ class CustomFreshCommand extends Command
     }
 
     /**
-     * Filter the given array of tables to only those that own migrations.
+     * Filter the given array of tables to only those that own migration files.
      *
      * @param  array  $tables
      * @return array
      */
-    protected function tablesOwnMigration(array $tables)
+    protected function filterTablesOwningMigrations(array $tables)
     {
         return array_values(array_filter($tables, function ($table) {
-            return !empty($this->getDatabaseMapping($table)["migrations"]);
+            return !empty($this->guessTableMigrations($table)["migrations"]);
         }));
     }
 }
