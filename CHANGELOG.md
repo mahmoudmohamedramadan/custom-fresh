@@ -2,7 +2,7 @@
 
 ## [v1.1.5](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v1.1.5)
 
-- [1.x] Refactoring the code.
+- [1.x] Refactors the code.
 - [1.x] Fixes the issue of creating an exception for the table that does not own migration files.
 - [1.x] Re-enables the foreign key constraints after dropping the tables.
 
@@ -41,13 +41,13 @@
 
 - [1.x] Fixes the issue of overriding the tables that should not be dropped.
 - [1.x] Updates the DocBlocks.
-- [1.x] Refactoring the code.
+- [1.x] Refactors the code.
 
 ## [v1.0.8](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v1.0.8) - [#2](https://github.com/mahmoudmohamedramadan/custom-fresh/pull/2)
 
 - [1.x] Fixes the old and faulty approach of retrieving the database tables.
 - [1.x] Updates the DocBlocks.
-- [1.x] Refactoring the code.
+- [1.x] Refactors the code.
 
 ## [v1.0.8 (alpha.1)](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v1.0.8-alpha.1) - [#1](https://github.com/mahmoudmohamedramadan/custom-fresh/pull/1)
 
@@ -55,4 +55,4 @@
 - [1.x] Adds the `doctrine/dbal` to the `require` key.
 - [1.x] Adds the `illuminate/database` to the `require` key.
 - [1.x] Upgrades the `require` key list.
-- [1.x] Refactoring the code.
+- [1.x] Refactors the code.
