@@ -32,6 +32,9 @@ composer require ramadan/custom-fresh
 
 After installing the package, you will see a new `fresh:custom` command.
 
+> [!NOTE]
+> The package also guesses the additional migration files that add a special column (e.g. `****_**_**_******_adds_is_admin_column_to_users_table.php`).
+
 ### Refreshing migrations
 
 You can exclude specific tables while refreshing the database inside your project:
