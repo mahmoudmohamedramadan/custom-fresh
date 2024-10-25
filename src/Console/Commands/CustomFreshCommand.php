@@ -70,7 +70,7 @@ class CustomFreshCommand extends Command
 
         // We will only show the tables that own migration files, fading away the issue of skip-dropping a
         // table and re-migrating it within a specific migration file, which leads to throwing an exception
-        // For instance, the "sessions" table does not have a migration in Laravel v.11.
+        // For instance, the "sessions" table does not have a migration in Laravel v11.
         $this->tablesOwningMigrations = $this->filterTablesOwningMigrations($this->getTables());
     }
 
