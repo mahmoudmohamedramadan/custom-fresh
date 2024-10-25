@@ -1,5 +1,11 @@
 # Release Notes for 1.x
 
+## [v1.1.5](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v1.1.5)
+
+- [1.x] Refactoring the code.
+- [1.x] Fixes the issue of creating an exception for the table that does not own migration files.
+- [1.x] Re-enables the foreign key constraints after dropping the tables.
+
 ## [v1.1.4](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v1.1.4)
 
 - [1.x] Updates the approach of getting the database tables.
