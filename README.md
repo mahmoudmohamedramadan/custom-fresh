@@ -37,7 +37,7 @@ After installing the package, you will see a new `fresh:custom` command.
 You can exclude specific tables while refreshing the database inside your project:
 
 ```SHELL
-php artisan fresh:custom posts,foo,bar
+php artisan fresh:custom users,foo
 ```
 
 ### Example
