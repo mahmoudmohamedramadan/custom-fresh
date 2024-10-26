@@ -68,9 +68,9 @@ class CustomFreshCommand extends Command
 
         $this->tables = $this->extractTableNames($this->processTables(), "name");
 
-        // We will only show the tables that own migration files, fading away the issue of skip-dropping a
+        // We will only show the tables owning migration files, to fade away the issue of skip-dropping a
         // table and re-migrating it within a specific migration file, which leads to throwing an exception
-        // For instance, the "sessions" table does not have a migration in Laravel v11.
+        // For instance, the "sessions" table does not have its migration file in Laravel v11.
         $this->tablesOwningMigrations = $this->filterTablesOwningMigrations($this->getTables());
     }
 
@@ -186,11 +186,11 @@ class CustomFreshCommand extends Command
      */
     public function insertMigrations(array $migrations)
     {
-        $migrationData = array_map(function ($migration) {
+        $migrationRecords = array_map(function ($migration) {
             return ["migration" => substr($migration, 0, -4), "batch" => 1];
         }, $migrations);
 
-        DB::table("migrations")->insert($migrationData);
+        DB::table("migrations")->insert($migrationRecords);
     }
 
     /**
