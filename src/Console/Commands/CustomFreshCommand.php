@@ -259,7 +259,7 @@ class CustomFreshCommand extends Command
     }
 
     /**
-     * Flatten the migrations from the database map.
+     * Flatten the migrations.
      *
      * @param  array  $migrations
      * @return array
