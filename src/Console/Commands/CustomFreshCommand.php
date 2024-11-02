@@ -17,7 +17,14 @@ class CustomFreshCommand extends Command
      * @var string
      */
     protected $signature = 'fresh:custom {table : The table(s) that you do not want to fresh}
-                {--force : Force the operation to run when in production}';
+                {--force : Force the operation to run when in production}
+                {--path=* : The path(s) to the migrations files to be executed}
+                {--realpath : Indicate any provided migration file paths are pre-resolved absolute paths}
+                {--schema-path= : The path to a schema dump file}
+                {--pretend : Dump the SQL queries that would be run}
+                {--seed : Indicates if the seed task should be re-run}
+                {--seeder= : The class name of the root seeder}
+                {--step : Force the migrations to be run so they can be rolled back individually}';
 
     /**
      * The console command description.
@@ -96,7 +103,16 @@ class CustomFreshCommand extends Command
             $this->dropUnmanagedTables($tables);
         });
 
-        $this->call('migrate', ['--force' => true]);
+        $this->call('migrate', [
+            '--force'       => true,
+            '--path'        => $this->option('path'),
+            '--realpath'    => $this->option('realpath'),
+            '--schema-path' => $this->option('schema-path'),
+            '--pretend'     => $this->option('pretend'),
+            '--seed'        => $this->option('seed'),
+            '--seeder'      => $this->option('seeder'),
+            '--step'        => $this->option('step'),
+        ]);
 
         return 0;
     }
@@ -128,7 +144,7 @@ class CustomFreshCommand extends Command
                     )
                 );
 
-                // We will re-invoke the method to update the invalid database details.
+                // We will re-invoke the method to update the invalid database details
                 $migrationsMap = $this->guessTableMigrations($value);
 
                 $databaseMap["migrations"][$index] = array_values($migrationsMap["migrations"]);
