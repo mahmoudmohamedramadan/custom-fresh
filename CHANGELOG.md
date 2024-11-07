@@ -1,6 +1,10 @@
 # Release Notes for 1.x
 
-## [Unreleased](https://github.com/mahmoudmohamedramadan/custom-fresh/compare/v1.1.5...1.x)
+## [Unreleased](https://github.com/mahmoudmohamedramadan/custom-fresh/compare/v1.1.6...1.x)
+
+## [v1.1.6](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v1.1.6)
+
+- [1.x] Allows the command to accept more options.
 
 ## [v1.1.5](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v1.1.5)
 
