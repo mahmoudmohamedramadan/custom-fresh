@@ -44,7 +44,7 @@ php artisan fresh:custom users,foo
 ```
 
 > [!TIP]
-> Use the `-h` of the command to check out all supported options.
+> Do not forget to always use the `-h` of the command to check out all supported options.
 
 ### Example
 
