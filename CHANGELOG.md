@@ -4,7 +4,7 @@
 
 ## [v1.1.6](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v1.1.6)
 
-- [1.x] Allows the command to accept more options.
+- [1.x] Adds the ability to pass more options to the command.
 
 ## [v1.1.5](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v1.1.5)
 
