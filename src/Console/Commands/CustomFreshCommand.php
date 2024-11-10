@@ -91,7 +91,7 @@ class CustomFreshCommand extends Command
     public function handle()
     {
         if (!$this->confirmToProceed()) {
-            return 1;
+            return 0;
         }
 
         try {
@@ -111,7 +111,7 @@ class CustomFreshCommand extends Command
             if ($this->option('graceful')) {
                 $this->components->warn($e->getMessage());
 
-                return 0;
+                return 1;
             }
 
             throw $e;
