@@ -109,7 +109,7 @@ class CustomFreshCommand extends Command
             $this->runMigrateCommand();
         } catch (Throwable $e) {
             if ($this->option('graceful')) {
-                $this->components->warn($e->getMessage());
+                $this->components->error($e->getMessage());
 
                 return 1;
             }
