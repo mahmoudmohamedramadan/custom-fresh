@@ -6,6 +6,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Ramadan\CustomFresh\Console\Confirmable;
+use Throwable;
 
 class CustomFreshCommand extends Command
 {
@@ -24,7 +25,8 @@ class CustomFreshCommand extends Command
                 {--pretend : Dump the SQL queries that would be run}
                 {--seed : Indicates if the seed task should be re-run}
                 {--seeder= : The class name of the root seeder}
-                {--step : Force the migrations to be run so they can be rolled back individually}';
+                {--step : Force the migrations to be run so they can be rolled back individually}
+                {--graceful : Return a successful exit code even if an error occurs}';
 
     /**
      * The console command description.
@@ -92,27 +94,28 @@ class CustomFreshCommand extends Command
             return 1;
         }
 
-        $databaseMap = $this->getDatabaseMap(explode(",", $this->argument("table")));
+        try {
+            $databaseMap = $this->getDatabaseMap(explode(",", $this->argument("table")));
 
-        $migrations = array_filter($this->flattenMigrations($databaseMap["migrations"]));
-        $tables     = array_filter($this->extractTableNames($databaseMap["tables"]));
+            $migrations = array_filter($this->flattenMigrations($databaseMap["migrations"]));
+            $tables     = array_filter($this->extractTableNames($databaseMap["tables"]));
 
-        $this->components->task('Dropping the tables', function () use ($migrations, $tables) {
-            $this->truncateMigrationsTable();
-            $this->insertMigrations($migrations);
-            $this->dropUnmanagedTables($tables);
-        });
+            $this->components->task('Dropping the tables', function () use ($migrations, $tables) {
+                $this->truncateMigrationsTable();
+                $this->insertMigrations($migrations);
+                $this->dropUnmanagedTables($tables);
+            });
 
-        $this->call('migrate', [
-            '--force'       => true,
-            '--path'        => $this->option('path'),
-            '--realpath'    => $this->option('realpath'),
-            '--schema-path' => $this->option('schema-path'),
-            '--pretend'     => $this->option('pretend'),
-            '--seed'        => $this->option('seed'),
-            '--seeder'      => $this->option('seeder'),
-            '--step'        => $this->option('step'),
-        ]);
+            $this->runMigrateCommand();
+        } catch (Throwable $e) {
+            if ($this->option('graceful')) {
+                $this->components->error($e->getMessage());
+
+                return 0;
+            }
+
+            throw $e;
+        }
 
         return 0;
     }
@@ -302,5 +305,24 @@ class CustomFreshCommand extends Command
         return array_values(array_filter($tables, function ($table) {
             return !empty($this->guessTableMigrations($table)["migrations"]);
         }));
+    }
+
+    /**
+     * Run the "migrate" command.
+     *
+     * @return void
+     */
+    protected function runMigrateCommand()
+    {
+        $this->call('migrate', [
+            '--force'       => true,
+            '--path'        => $this->option('path'),
+            '--realpath'    => $this->option('realpath'),
+            '--schema-path' => $this->option('schema-path'),
+            '--pretend'     => $this->option('pretend'),
+            '--seed'        => $this->option('seed'),
+            '--seeder'      => $this->option('seeder'),
+            '--step'        => $this->option('step'),
+        ]);
     }
 }

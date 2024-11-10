@@ -11,7 +11,7 @@
 Custom Fresh allows fine-grain control of migrations inside your Laravel project, where you can choose which tables will not be dropped while refreshing the database.
 
 > [!WARNING]
-> Always consider upgrading the package to the latest version ([v1.1.6](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v1.1.6)), which is the most stable release.
+> Always consider upgrading the package to the [latest](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/latest) version, which is the most stable release.
 
 - [Installation](#installation)
 - [Usage](#usage)
