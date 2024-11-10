@@ -94,31 +94,27 @@ class CustomFreshCommand extends Command
             return 1;
         }
 
-        $databaseMap = $this->getDatabaseMap(explode(",", $this->argument("table")));
+        try {
+            $databaseMap = $this->getDatabaseMap(explode(",", $this->argument("table")));
 
-        $migrations = array_filter($this->flattenMigrations($databaseMap["migrations"]));
-        $tables     = array_filter($this->extractTableNames($databaseMap["tables"]));
+            $migrations = array_filter($this->flattenMigrations($databaseMap["migrations"]));
+            $tables     = array_filter($this->extractTableNames($databaseMap["tables"]));
 
-        $this->components->task('Dropping the tables', function () use ($migrations, $tables) {
-            $this->truncateMigrationsTable();
-            $this->insertMigrations($migrations);
-            $this->dropUnmanagedTables($tables);
-        });
+            $this->components->task('Dropping the tables', function () use ($migrations, $tables) {
+                $this->truncateMigrationsTable();
+                $this->insertMigrations($migrations);
+                $this->dropUnmanagedTables($tables);
+            });
 
-        if ($this->laravel->version() < '11') {
-            try {
-                $this->runMigrateCommand();
-            } catch (Throwable $e) {
-                if ($this->option('graceful')) {
-                    $this->components->warn($e->getMessage());
-
-                    return 0;
-                }
-
-                throw $e;
-            }
-        } else {
             $this->runMigrateCommand();
+        } catch (Throwable $e) {
+            if ($this->option('graceful')) {
+                $this->components->warn($e->getMessage());
+
+                return 0;
+            }
+
+            throw $e;
         }
 
         return 0;
@@ -318,7 +314,7 @@ class CustomFreshCommand extends Command
      */
     protected function runMigrateCommand()
     {
-        $options = [
+        $this->call('migrate', [
             '--force'       => true,
             '--path'        => $this->option('path'),
             '--realpath'    => $this->option('realpath'),
@@ -327,8 +323,6 @@ class CustomFreshCommand extends Command
             '--seed'        => $this->option('seed'),
             '--seeder'      => $this->option('seeder'),
             '--step'        => $this->option('step'),
-        ];
-
-        $this->call('migrate', $this->laravel->version() < '11' ? $options : array_merge($options, ['--graceful' => true]));
+        ]);
     }
 }
