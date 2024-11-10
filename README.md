@@ -43,6 +43,9 @@ You can exclude specific tables while refreshing the database inside your projec
 php artisan fresh:custom users,foo
 ```
 
+> [!TIP]
+> Do not forget to always use the `-h` of the command to check out all supported options.
+
 ### Example
 
 ![Command Example](https://raw.githubusercontent.com/mahmoudmohamedramadan/custom-fresh/refs/heads/main/assets/command-example.png "Command Example")
