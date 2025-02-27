@@ -1,6 +1,10 @@
 # Release Notes for 1.x
 
-## [Unreleased](https://github.com/mahmoudmohamedramadan/custom-fresh/compare/v1.1.7...1.x)
+## [Unreleased](https://github.com/mahmoudmohamedramadan/custom-fresh/compare/v1.1.8...1.x)
+
+## [v1.1.8](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v1.1.8)
+
+- [1.x] Adds the compatibility to support **Laravel v12**.
 
 ## [v1.1.7](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v1.1.7)
 
