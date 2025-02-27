@@ -4,8 +4,8 @@
 
 ## [v1.1.7](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v1.1.7)
 
-- [1.x] Refactors the code.
 - [1.x] Adds the `graceful` option to the command.
+- [1.x] Refactors the code.
 
 ## [v1.1.6](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v1.1.6)
 
@@ -14,18 +14,18 @@
 ## [v1.1.5](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v1.1.5)
 
 - [1.x] Refactors the code.
-- [1.x] Fixes the issue of creating an exception for the table that does not own migration files.
 - [1.x] Re-enables the foreign key constraints after dropping the tables.
+- [1.x] Fixes the issue of creating an exception for the table that does not own migration files.
 
 ## [v1.1.4](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v1.1.4)
 
-- [1.x] Updates the approach of getting the database tables.
-- [1.x] Fixes the compatibility issue between `Laravel-v.11` and `Doctrine`.
 - [1.x] Adds the `laravel/framework` to the `require` key.
 - [1.x] Adds the `ext-pdo` to the `require` key.
+- [1.x] Updates the approach of getting the database tables.
 - [1.x] Removes the `doctrine/dbal` from the `require` key.
 - [1.x] Removes the `illuminate/support` from the `require` key.
 - [1.x] Removes the `illuminate/console` from the `require` key.
+- [1.x] Fixes the compatibility issue between `Laravel v11` and `Doctrine`.
 
 ## [v1.1.3](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v1.1.3)
 
@@ -50,20 +50,20 @@
 
 ## [v1.0.9](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v1.0.9) - [#3](https://github.com/mahmoudmohamedramadan/custom-fresh/pull/3)
 
-- [1.x] Fixes the issue of overriding the tables that should not be dropped.
 - [1.x] Updates the DocBlocks.
 - [1.x] Refactors the code.
+- [1.x] Fixes the issue of overriding the tables that should not be dropped.
 
 ## [v1.0.8](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v1.0.8) - [#2](https://github.com/mahmoudmohamedramadan/custom-fresh/pull/2)
 
-- [1.x] Fixes the old and faulty approach of retrieving the database tables.
 - [1.x] Updates the DocBlocks.
 - [1.x] Refactors the code.
+- [1.x] Fixes the old and faulty approach of retrieving the database tables.
 
 ## [v1.0.8 (alpha.1)](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v1.0.8-alpha.1) - [#1](https://github.com/mahmoudmohamedramadan/custom-fresh/pull/1)
 
-- [1.x] Fixes the issue of retrieving a list of tables in different databases.
 - [1.x] Adds the `doctrine/dbal` to the `require` key.
 - [1.x] Adds the `illuminate/database` to the `require` key.
 - [1.x] Upgrades the `require` key list.
 - [1.x] Refactors the code.
+- [1.x] Fixes the issue of retrieving the list of tables in different databases.
