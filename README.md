@@ -8,7 +8,7 @@
 
  - - -
 
-Custom Fresh allows fine-grain control of migrations inside your Laravel project, where you can choose which tables will not be dropped while refreshing the database.
+Custom Fresh provides fine-grained control of migrations within your Laravel project, allowing you to select which tables will not be dropped when refreshing the database.
 
 > [!WARNING]
 > Always consider upgrading the package to the [latest](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/latest) version, which is the most stable release.
@@ -44,7 +44,8 @@ php artisan fresh:custom users,foo
 ```
 
 > [!TIP]
-> Do not forget to always use the `-h` of the command to check out all supported options.
+>   - Easily order results by model relationships (`HasOne`, `HasMany`, `BelongsTo`, `BelongsToMany`) without referring to manual joins. Check out [Order Results](SEARCH.md#order-results) to learn more.
+
 
 ### Example
 
