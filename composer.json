@@ -25,7 +25,7 @@
         {
             "name": "Mahmoud Ramadan",
             "email": "mahmoudramadan496@gmail.com",
-            "homepage": "https://mmramadan.com",
+            "homepage": "https://portfolio.mmramadan.com",
             "role": "Developer"
         }
     ],
@@ -50,12 +50,12 @@
     "prefer-stable": true,
     "funding": [
         {
-            "type": "github",
-            "url": "https://github.com/sponsors/mahmoudmohamedramadan"
+            "type": "paypal",
+            "url": "https://paypal.com/paypalme/mmramadan496"
         },
         {
-            "type": "paypal",
-            "url": "https://www.paypal.com/paypalme/mmramadan496"
+            "type": "github",
+            "url": "https://github.com/sponsors/mahmoudmohamedramadan"
         },
         {
             "type": "buymeacoffee",
@@ -63,7 +63,7 @@
         },
         {
             "type": "patreon",
-            "url": "https://www.patreon.com/mmramadan496"
+            "url": "https://patreon.com/mmramadan496"
         }
     ]
 }
