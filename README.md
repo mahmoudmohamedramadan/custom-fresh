@@ -57,7 +57,7 @@ php artisan fresh:custom users,foo
 
 ## Support me
 
-- [PayPal](https://www.paypal.com/paypalme/mmramadan496)
+- [PayPal](https://paypal.com/paypalme/mmramadan496)
 
 ## License
 
