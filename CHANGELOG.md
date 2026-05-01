@@ -1,6 +1,10 @@
 # Release Notes for 1.x
 
-## [Unreleased](https://github.com/mahmoudmohamedramadan/custom-fresh/compare/v1.1.8...1.x)
+## [Unreleased](https://github.com/mahmoudmohamedramadan/custom-fresh/compare/v1.1.9...1.x)
+
+## [v1.1.9](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v1.1.9)
+
+- [1.x] Adds compatibility to support **Laravel v13** and introduces a refreshed package logo.
 
 ## [v1.1.8](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v1.1.8)
 

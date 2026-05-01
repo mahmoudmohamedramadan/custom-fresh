@@ -1,10 +1,12 @@
 # Custom Fresh
 
-![Custom Fresh](https://raw.githubusercontent.com/mahmoudmohamedramadan/custom-fresh/refs/heads/main/assets/custom-fresh.png "Custom Fresh")
+![Custom Fresh](/art/logo.png "Custom Fresh")
 
-![License](https://img.shields.io/packagist/l/ramadan/custom-fresh "License")
-![Latest Version on Packagist](https://img.shields.io/packagist/v/ramadan/custom-fresh "Latest Version on Packagist")
-![Total Downloads](https://img.shields.io/packagist/dt/ramadan/custom-fresh "Total Downloads")
+![Latest Version](https://img.shields.io/packagist/v/ramadan/custom-fresh?style=flat-square&logo=packagist)
+![Total Downloads](https://img.shields.io/packagist/dt/ramadan/custom-fresh?style=flat-square)
+![PHP](https://img.shields.io/badge/php-%5E8.2-777BB4?logo=php&style=flat-square)
+![Laravel](https://img.shields.io/badge/laravel-%5E10.0%7C%5E11.0%7C%5E12.0%7C%5E13.0-FF2D20?logo=laravel&style=flat-square)
+![License](https://img.shields.io/packagist/l/ramadan/custom-fresh?style=flat-square)
 
  - - -
 
@@ -48,7 +50,7 @@ php artisan fresh:custom users,foo
 
 ### Example
 
-![Command Example](https://raw.githubusercontent.com/mahmoudmohamedramadan/custom-fresh/refs/heads/main/assets/command-example.png "Command Example")
+![Custom Fresh CLI Command Example](/art/screenshot.png)
 
 ## Credits
 
