@@ -14,7 +14,7 @@ Custom Fresh offers fine-grained control over migrations within your Laravel pro
 
 > [!IMPORTANT]  
 > Additional features are currently in progress and being prepared on the [development branch](https://github.com/mahmoudmohamedramadan/custom-fresh/tree/development).
->
+
 > [!TIP]
 > Always consider upgrading the package to the [latest](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/latest) version, which is the most stable release.
 
