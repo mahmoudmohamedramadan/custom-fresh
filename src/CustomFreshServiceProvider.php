@@ -14,7 +14,7 @@ class CustomFreshServiceProvider extends ServiceProvider
     protected string $configPath = __DIR__ . '/../config/custom-fresh.php';
 
     /**
-     * Register the application services.
+     * Register any application services.
      *
      * @return void
      */
