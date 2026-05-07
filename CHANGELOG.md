@@ -1,8 +1,8 @@
 # Release Notes for 1.x
 
-## [Unreleased](https://github.com/mahmoudmohamedramadan/custom-fresh/compare/v1.2.0...1.x)
+## [Unreleased](https://github.com/mahmoudmohamedramadan/custom-fresh/compare/v1.2.0-alpha.1...1.x)
 
-## [v1.2.0](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v1.2.0)
+## [v1.2.0-alpha.1](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v1.2.0-alpha.1)
 
 - [1.x] Defers the database/filesystem bootstrap from `__construct` to `handle()` so the package no longer hits the database on every artisan invocation.
 - [1.x] Replaces the filename heuristic with real `Schema::create` / `Schema::table` / `Schema::drop*` / `Schema::rename` parsing, captures **every** matching alter migration (fixes the previous `[0]`-only bug), and recursively scans nested migration folders, `--path` paths, and migrator-registered paths.
