@@ -6,6 +6,10 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Ramadan\CustomFresh\Console\Confirmable;
+use Ramadan\CustomFresh\Events\DatabaseRefreshed;
+use Ramadan\CustomFresh\Events\RefreshingDatabase;
+use Ramadan\CustomFresh\Events\TablesDropped;
+use Ramadan\CustomFresh\Support\MigrationFileScanner;
 use Throwable;
 
 class CustomFreshCommand extends Command
@@ -17,7 +21,10 @@ class CustomFreshCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'fresh:custom {table : The table(s) that you do not want to fresh}
+    protected $signature = 'fresh:custom
+                {tables? : Tables to preserve (comma-separated, supports glob patterns like "oauth_*")}
+                {--keep= : Alternative to the positional argument; comma-separated list of tables/patterns to preserve}
+                {--database= : The database connection to use}
                 {--force : Force the operation to run when in production}
                 {--path=* : The path(s) to the migrations files to be executed}
                 {--realpath : Indicate any provided migration file paths are pre-resolved absolute paths}
@@ -26,62 +33,64 @@ class CustomFreshCommand extends Command
                 {--seed : Indicates if the seed task should be re-run}
                 {--seeder= : The class name of the root seeder}
                 {--step : Force the migrations to be run so they can be rolled back individually}
-                {--graceful : Return a successful exit code even if an error occurs}';
+                {--graceful : Return a successful exit code even if an error occurs}
+                {--explain : Show what would happen without dropping or migrating anything}';
 
     /**
      * The console command description.
      *
      * @var string
      */
-    protected $description = 'Create exceptions for the given table names while refreshing the database';
+    protected $description = 'Refresh the database while preserving the specified tables.';
 
     /**
      * The database connection instance.
      *
-     * @var \Illuminate\Database\Connection
+     * @var \Illuminate\Database\Connection|null
      */
     protected $connection;
 
     /**
      * The schema grammar instance.
      *
-     * @var \Illuminate\Database\Schema\Grammars\Grammar
+     * @var \Illuminate\Database\Schema\Grammars\Grammar|null
      */
     protected $grammar;
 
     /**
-     * The database tables.
+     * All table names in the target database.
      *
-     * @var array
+     * @var array<int, string>
      */
-    protected $tables;
+    protected array $tables = [];
 
     /**
-     * The database tables that own migration files.
+     * Migration filenames indexed by table.
      *
-     * @var array
+     * @var array<string, array<int, string>>
      */
-    protected $tablesOwningMigrations;
+    protected array $migrationsByTable = [];
 
     /**
-     * Create a new custom fresh command instance.
+     * The tables that own migration files.
      *
-     * @return void
+     * @var array<int, string>
      */
-    public function __construct()
-    {
-        parent::__construct();
+    protected array $tablesOwningMigrations = [];
 
-        $this->connection = Schema::getConnection();
-        $this->grammar    = $this->connection->getSchemaGrammar();
+    /**
+     * Migration scanner used to map files to the tables they touch.
+     *
+     * @var \Ramadan\CustomFresh\Support\MigrationFileScanner
+     */
+    protected MigrationFileScanner $scanner;
 
-        $this->tables = $this->extractTableNames($this->processTables(), "name");
-
-        // We will only show the tables owning migration files, to fade away the issue of skip-dropping a
-        // table and re-migrating it within a specific migration file, which leads to throwing an exception
-        // For instance, the "sessions" table does not have its migration file in Laravel v11.
-        $this->tablesOwningMigrations = $this->filterTablesOwningMigrations($this->getTables());
-    }
+    /**
+     * The list of tables that were dropped.
+     *
+     * @var array<int, string>
+     */
+    protected array $lastDroppedCache = [];
 
     /**
      * Execute the console command.
@@ -90,151 +99,367 @@ class CustomFreshCommand extends Command
      */
     public function handle()
     {
-        if (!$this->confirmToProceed()) {
-            return 1;
+        if (! $this->confirmToProceed()) {
+            return self::FAILURE;
         }
 
         try {
-            $databaseMap = $this->getDatabaseMap(explode(",", $this->argument("table")));
-
-            $migrations = array_filter($this->flattenMigrations($databaseMap["migrations"]));
-            $tables     = array_filter($this->extractTableNames($databaseMap["tables"]));
-
-            $this->components->task('Dropping the tables', function () use ($migrations, $tables) {
-                $this->truncateMigrationsTable();
-                $this->insertMigrations($migrations);
-                $this->dropUnmanagedTables($tables);
-            });
-
-            $this->runMigrateCommand();
+            return $this->runRefresh();
         } catch (Throwable $e) {
-            if ($this->option('graceful')) {
-                $this->components->error($e->getMessage());
-
-                return 0;
+            if (! $this->option('graceful')) {
+                throw $e;
             }
 
-            throw $e;
-        }
+            $this->components->error($e->getMessage());
 
-        return 0;
+            return self::SUCCESS;
+        }
     }
 
     /**
-     * Get the migrations with their correct table names.
+     * Run the actual refresh workflow once the user has confirmed.
      *
-     * @param  array  $tablesNeededToDrop
-     * @return array
+     * @return int
      */
-    protected function getDatabaseMap(array $tablesNeededToDrop)
+    protected function runRefresh()
     {
-        // At first, we will filter the given array of tables to go through each one
-        // verifying that it has a migration. Then, we will check if the "tables" key
-        // has been set by the "guessTableMigrations" method because if it is not set,
-        // we will ask the developer to choose the correct table instead.
-        foreach (array_filter($tablesNeededToDrop) as $index => $table) {
-            $migrationsMap = $this->guessTableMigrations($table);
+        $this->bootResources();
 
-            $databaseMap["migrations"][] = array_values($migrationsMap["migrations"]);
-            $databaseMap["tables"][]     = array_values($migrationsMap["tables"]);
+        $requested = $this->resolveRequestedTables();
 
-            if (empty($databaseMap["tables"][$index])) {
-                $value = $this->choice(
-                    "Choose the correct table instead ({$table})",
-                    array_diff(
-                        $this->getTablesOwningMigrations(),
-                        array_merge($this->extractTableNames($databaseMap["tables"]), ["migrations"])
-                    )
-                );
+        if (empty($requested)) {
+            $this->components->warn(
+                'No tables to preserve were resolved. '
+                    . 'Pass tables/patterns via the argument or "--keep=", '
+                    . 'set "always_keep"/"patterns" in config/custom-fresh.php, '
+                    . 'or use "php artisan migrate:fresh" for a full reset.'
+            );
 
-                // We will re-invoke the method to update the invalid database details
-                $migrationsMap = $this->guessTableMigrations($value);
+            return self::FAILURE;
+        }
 
-                $databaseMap["migrations"][$index] = array_values($migrationsMap["migrations"]);
-                $databaseMap["tables"][$index]     = array_values($migrationsMap["tables"]);
+        $databaseMap = $this->buildDatabaseMap($requested);
+
+        $migrations = $databaseMap['migrations'];
+        $tables     = $databaseMap['tables'];
+
+        if ($this->option('explain')) {
+            return $this->explainPlan($tables, $migrations);
+        }
+
+        event(new RefreshingDatabase($tables, $migrations, $this->connectionName()));
+
+        $this->components->task('Dropping the tables', function () use ($migrations, $tables) {
+            $this->refreshMigrationsTable($migrations);
+            $this->dropUnmanagedTables($tables);
+        });
+
+        event(new TablesDropped($tables, $this->lastDroppedTables(), $this->connectionName()));
+
+        $this->runMigrateCommand();
+
+        event(new DatabaseRefreshed($tables, $this->connectionName()));
+
+        return self::SUCCESS;
+    }
+
+    /**
+     * Lazily prepare the database/file-system state needed by the command.
+     *
+     * @return void
+     */
+    protected function bootResources()
+    {
+        $connectionName = $this->connectionName();
+
+        $this->connection = $connectionName
+            ? Schema::connection($connectionName)->getConnection()
+            : Schema::getConnection();
+
+        $this->grammar = $this->connection->getSchemaGrammar();
+
+        $this->tables = $this->extractTableNames($this->processTables(), 'name');
+
+        $this->scanner = new MigrationFileScanner;
+
+        $this->migrationsByTable = $this->scanner->indexByTable(
+            $this->scanner->collect($this->getMigrationPaths())
+        );
+
+        $this->tablesOwningMigrations = array_values(array_intersect(
+            $this->tables,
+            array_keys($this->migrationsByTable)
+        ));
+    }
+
+    /**
+     * Resolve the final list of tables the user wants to keep.
+     *
+     * @return array<int, string>
+     */
+    protected function resolveRequestedTables()
+    {
+        $positional = (string) ($this->argument('tables') ?? '');
+        $option     = (string) ($this->option('keep') ?? '');
+        $configured = (array) config('custom-fresh.always_keep', []);
+        $patterns   = (array) config('custom-fresh.patterns', []);
+
+        $items = array_merge(
+            $this->splitList($positional),
+            $this->splitList($option),
+            array_map('strval', $configured),
+            array_map('strval', $patterns)
+        );
+
+        $resolved = [];
+
+        foreach (array_unique(array_filter($items)) as $item) {
+            if ($this->isGlob($item)) {
+                foreach ($this->tables as $table) {
+                    if (fnmatch($item, $table)) {
+                        $resolved[] = $table;
+                    }
+                }
+                continue;
+            }
+
+            $resolved[] = $item;
+        }
+
+        return array_values(array_unique($resolved));
+    }
+
+    /**
+     * Build the preserve plan for tables to keep and migration rows to pre-insert.
+     *
+     * @param  array<int, string>  $requested
+     * @return array{tables: array<int, string>, migrations: array<int, string>}
+     */
+    protected function buildDatabaseMap(array $requested)
+    {
+        $map = ['tables' => [], 'migrations' => []];
+
+        foreach ($requested as $table) {
+            if (! array_key_exists($table, $this->migrationsByTable)) {
+                // Offer ONLY tables that own migration files, so the user
+                // cannot accidentally pick something like "sessions" on
+                // Laravel v11 (no migration file shipped) -- preserving
+                // such a table without inserting a corresponding
+                // migrations row would let a later migration re-create it
+                // and crash the migrate step with a "table already
+                // exists" exception.
+                $candidates = array_values(array_diff(
+                    $this->tablesOwningMigrations,
+                    $map['tables'],
+                    ['migrations']
+                ));
+
+                if (empty($candidates)) {
+                    $this->components->warn("No migration matches table [{$table}]. Skipping.");
+                    continue;
+                }
+
+                if (! $this->input->isInteractive()) {
+                    $this->components->warn("Skipping unknown table [{$table}] (--no-interaction).");
+                    continue;
+                }
+
+                $table = $this->choice("Choose the correct table instead ({$table})", $candidates);
+            }
+
+            $migrations = $this->migrationsByTable[$table] ?? [];
+
+            if (empty($migrations)) {
+                continue;
+            }
+
+            $map['tables'][]   = $table;
+            $map['migrations'] = array_merge($map['migrations'], $migrations);
+        }
+
+        $map['tables']     = array_values(array_unique(array_filter($map['tables'])));
+        $map['migrations'] = array_values(array_unique(array_filter($map['migrations'])));
+
+        return $map;
+    }
+
+    /**
+     * Reset the migrations table and pre-insert the rows for every preserved migration.
+     *
+     * @param  array<int, string>  $migrations
+     * @return void
+     */
+    protected function refreshMigrationsTable(array $migrations)
+    {
+        $connection = $this->connectionName();
+
+        Schema::connection($connection)->disableForeignKeyConstraints();
+
+        try {
+            DB::connection($connection)->table('migrations')->delete();
+
+            if (! empty($migrations)) {
+                $records = array_map(static function ($migration) {
+                    return [
+                        'migration' => pathinfo($migration, PATHINFO_FILENAME),
+                        'batch'     => 1,
+                    ];
+                }, $migrations);
+
+                DB::connection($connection)->table('migrations')->insert($records);
+            }
+        } finally {
+            Schema::connection($connection)->enableForeignKeyConstraints();
+        }
+    }
+
+    /**
+     * Drop every table except the preserved ones (and "migrations").
+     *
+     * @param  array<int, string>  $keep
+     * @return void
+     */
+    protected function dropUnmanagedTables(array $keep)
+    {
+        $connection = $this->connectionName();
+
+        $toDrop = array_values(array_diff(
+            $this->tables,
+            array_merge($keep, ['migrations'])
+        ));
+
+        $this->lastDroppedCache = $toDrop;
+
+        Schema::connection($connection)->disableForeignKeyConstraints();
+
+        try {
+            foreach ($toDrop as $table) {
+                Schema::connection($connection)->dropIfExists($table);
+            }
+        } finally {
+            Schema::connection($connection)->enableForeignKeyConstraints();
+        }
+    }
+
+    /**
+     * Get the list of tables that were dropped.
+     *
+     * @return array<int, string>
+     */
+    protected function lastDroppedTables()
+    {
+        return $this->lastDroppedCache;
+    }
+
+    /**
+     * Render a human-friendly summary of what would happen, without touching the database.
+     *
+     * @param  array<int, string>  $keep
+     * @param  array<int, string>  $migrations
+     * @return int
+     */
+    protected function explainPlan(array $keep, array $migrations)
+    {
+        $drop = array_values(array_diff(
+            $this->tables,
+            array_merge($keep, ['migrations'])
+        ));
+
+        $this->components->info('Custom Fresh — dry run (no changes will be applied)');
+
+        $this->components->twoColumnDetail(
+            '<fg=cyan>Connection</>',
+            $this->connection->getName()
+        );
+        $this->components->twoColumnDetail(
+            '<fg=green>Tables to preserve</>',
+            empty($keep) ? '<fg=gray>none</>' : implode(', ', $keep)
+        );
+        $this->components->twoColumnDetail(
+            '<fg=red>Tables to drop</>',
+            empty($drop) ? '<fg=gray>none</>' : implode(', ', $drop)
+        );
+        $this->components->twoColumnDetail(
+            '<fg=yellow>Preserved migration rows</>',
+            (string) count($migrations)
+        );
+
+        if (! empty($migrations)) {
+            $this->components->bulletList($migrations);
+        }
+
+        return self::SUCCESS;
+    }
+
+    /**
+     * Resolve the list of migration paths that should be scanned.
+     *
+     * @return array<int, string>
+     */
+    protected function getMigrationPaths()
+    {
+        $paths = [database_path('migrations')];
+
+        foreach ((array) $this->option('path') as $path) {
+            if (! is_string($path) || $path === '') {
+                continue;
+            }
+
+            $paths[] = $this->option('realpath') ? $path : base_path($path);
+        }
+
+        if ($this->getLaravel()->bound('migrator')) {
+            $migrator = $this->getLaravel()->make('migrator');
+
+            if (method_exists($migrator, 'paths')) {
+                $paths = array_merge($paths, $migrator->paths());
             }
         }
 
-        return $databaseMap;
+        return array_values(array_unique(array_filter($paths)));
     }
 
     /**
-     * Guess the migrations of the given table name.
+     * Split a comma-separated string into a clean list of items.
      *
-     * @param  string  $table
-     * @return array
+     * @param  string  $value
+     * @return array<int, string>
      */
-    protected function guessTableMigrations(string $table)
+    protected function splitList(string $value)
     {
-        $migrationsPath = database_path('migrations');
-        $migrationsMap  = ["migrations" => [], "tables" => []];
-
-        if (
-            !empty($migration = glob("{$migrationsPath}/*_create_{$table}_table.php")) ||
-            !empty($migration = glob("{$migrationsPath}/*_create_{$table}.php"))
-        ) {
-            array_push($migrationsMap["tables"], $table);
-            array_push($migrationsMap["migrations"], basename($migration[0]));
-        }
-
-        if (
-            !empty($migration = glob("{$migrationsPath}/*_{to,from,in}_{$table}_table.php", GLOB_BRACE)) ||
-            !empty($migration = glob("{$migrationsPath}/*_{to,from,in}_{$table}.php", GLOB_BRACE))
-        ) {
-            array_push($migrationsMap["migrations"], basename($migration[0]));
-        }
-
-        return $migrationsMap;
+        return array_values(array_filter(array_map(
+            static fn($item) => trim((string) $item),
+            explode(',', $value)
+        ), static fn($item) => $item !== ''));
     }
 
     /**
-     * Truncate the "migrations" table.
+     * Determine whether the given pattern should be matched as a glob.
      *
-     * @return void
+     * @param  string  $value
+     * @return bool
      */
-    protected function truncateMigrationsTable()
+    protected function isGlob(string $value)
     {
-        DB::table("migrations")->truncate();
+        return (bool) preg_match('/[\\*\\?\\[]/', $value);
     }
 
     /**
-     * Insert the given migrations into the "migrations" table.
+     * Get the resolved connection name, or null for the default connection.
      *
-     * @param  array  $migrations
-     * @return void
+     * @return string|null
      */
-    public function insertMigrations(array $migrations)
+    protected function connectionName()
     {
-        $migrationRecords = array_map(function ($migration) {
-            return ["migration" => substr($migration, 0, -4), "batch" => 1];
-        }, $migrations);
+        $name = $this->option('database');
 
-        DB::table("migrations")->insert($migrationRecords);
-    }
-
-    /**
-     * Drop all tables except the given array of table names.
-     *
-     * @param  array  $tables
-     * @return void
-     */
-    protected function dropUnmanagedTables(array $tables)
-    {
-        // We will get all database tables including the ones that do not own migration files,
-        // to eliminate the issue of migrating a table that already exists in the database.
-        $tablesShouldBeDropped = array_diff($this->getTables(), array_merge($tables, ["migrations"]));
-
-        Schema::disableForeignKeyConstraints();
-        foreach ($tablesShouldBeDropped as $table) {
-            Schema::dropIfExists($table);
-        }
-        Schema::enableForeignKeyConstraints();
+        return is_string($name) && $name !== '' ? $name : null;
     }
 
     /**
      * Process the results of a tables query.
      *
-     * @return array
+     * @return array<int, array<string, mixed>>
      */
     protected function processTables()
     {
@@ -246,31 +471,11 @@ class CustomFreshCommand extends Command
     }
 
     /**
-     * Get all listed database tables.
+     * Extract the table names from a result set using the given column key.
      *
-     * @return array
-     */
-    protected function getTables()
-    {
-        return $this->tables;
-    }
-
-    /**
-     * Get the database tables that own migration files.
-     *
-     * @return array
-     */
-    protected function getTablesOwningMigrations()
-    {
-        return $this->tablesOwningMigrations;
-    }
-
-    /**
-     * Extract the table names from the array using the given column key.
-     *
-     * @param  array  $tables
+     * @param  array<int, array<string, mixed>>  $tables
      * @param  string|int  $columnKey
-     * @return array
+     * @return array<int, string>
      */
     protected function extractTableNames(array $tables, string|int $columnKey = 0)
     {
@@ -278,43 +483,13 @@ class CustomFreshCommand extends Command
     }
 
     /**
-     * Flatten the migrations.
-     *
-     * @param  array  $migrations
-     * @return array
-     */
-    protected function flattenMigrations(array $migrations)
-    {
-        return array_reduce($migrations, function ($carry, $migration) {
-            if (is_array($migration)) {
-                return array_merge($carry, $migration);
-            }
-
-            return array_merge($carry, [$migration]);
-        }, []);
-    }
-
-    /**
-     * Filter the given array of tables to only those that own migration files.
-     *
-     * @param  array  $tables
-     * @return array
-     */
-    protected function filterTablesOwningMigrations(array $tables)
-    {
-        return array_values(array_filter($tables, function ($table) {
-            return !empty($this->guessTableMigrations($table)["migrations"]);
-        }));
-    }
-
-    /**
-     * Run the "migrate" command.
+     * Run the "migrate" command with the options passed through to it.
      *
      * @return void
      */
     protected function runMigrateCommand()
     {
-        $this->call('migrate', [
+        $arguments = [
             '--force'       => true,
             '--path'        => $this->option('path'),
             '--realpath'    => $this->option('realpath'),
@@ -323,6 +498,12 @@ class CustomFreshCommand extends Command
             '--seed'        => $this->option('seed'),
             '--seeder'      => $this->option('seeder'),
             '--step'        => $this->option('step'),
-        ]);
+        ];
+
+        if ($connection = $this->connectionName()) {
+            $arguments['--database'] = $connection;
+        }
+
+        $this->call('migrate', $arguments);
     }
 }

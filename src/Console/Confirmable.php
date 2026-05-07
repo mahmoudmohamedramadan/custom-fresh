@@ -7,8 +7,6 @@ trait Confirmable
     /**
      * Confirm before proceeding with the action.
      *
-     * This method only asks for confirmation in production.
-     *
      * @param  string              $warning
      * @param  \Closure|bool|null  $callback
      * @return bool
@@ -45,7 +43,9 @@ trait Confirmable
     protected function getDefaultConfirmCallback()
     {
         return function () {
-            return $this->getLaravel()->environment() === 'production';
+            $environments = (array) config('custom-fresh.confirm_in', ['production']);
+
+            return in_array($this->getLaravel()->environment(), $environments, true);
         };
     }
 }
