@@ -19,7 +19,7 @@
 
 ## [v1.1.8](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v1.1.8)
 
-- [1.x] Adds the compatibility to support **Laravel v12**.
+- [1.x] Adds compatibility to support **Laravel v12**.
 
 ## [v1.1.7](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v1.1.7)
 
@@ -34,7 +34,7 @@
 
 - [1.x] Refactors the code.
 - [1.x] Re-enables the foreign key constraints after dropping the tables.
-- [1.x] Fixes the issue of creating an exception for the table that does not own migration files.
+- [1.x] Fixes the issue where an exception was thrown for tables that lack migration files.
 
 ## [v1.1.4](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v1.1.4)
 
