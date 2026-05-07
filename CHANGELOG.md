@@ -7,7 +7,7 @@
 - [1.x] Defers the database/filesystem bootstrap from `__construct` to `handle()` so the package no longer hits the database on every artisan invocation.
 - [1.x] Replaces the filename heuristic with real `Schema::create` / `Schema::table` / `Schema::drop*` / `Schema::rename` parsing, captures **every** matching alter migration (fixes the previous `[0]`-only bug), and recursively scans nested migration folders, `--path` paths, and migrator-registered paths.
 - [1.x] Adds the `--database=` option and forwards it to the underlying `migrate` call.
-- [1.x] Adds the `--keep=` flag as an alias for the positional argument and supports glob patterns (e.g. `oauth_*`).
+- [1.x] Adds the `--keep=` flag as an alias for the positional argument and supports glob patterns (e.g., `oauth_*`).
 - [1.x] Adds the `--explain` dry-run mode that previews the work without touching the database.
 - [1.x] Adds a publishable config file (`custom-fresh.php`) with `always_keep`, `patterns`, and `confirm_in` keys.
 - [1.x] Adds the `RefreshingDatabase`, `TablesDropped`, and `DatabaseRefreshed` lifecycle events.
