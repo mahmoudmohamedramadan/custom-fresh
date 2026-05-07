@@ -16,6 +16,7 @@ Custom Fresh offers fine-grained control over migrations within your Laravel pro
 > Always consider upgrading the package to the [latest](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/latest) version, which is the most stable release.
 
 - [Installation](#installation)
+- [Testing the upcoming release](#testing-the-upcoming-release)
 - [Usage](#usage)
   - [Refreshing migrations](#refreshing-migrations)
   - [Glob patterns](#glob-patterns)
@@ -40,6 +41,16 @@ composer require ramadan/custom-fresh
 ```SHELL
 php artisan vendor:publish --tag=custom-fresh-config
 ```
+
+## Testing the upcoming release
+
+To try the **v1.2.0-alpha.1** pre-release ahead of stable **v1.2.0**, require it explicitly:
+
+```SHELL
+composer require ramadan/custom-fresh:1.2.0-alpha.1
+```
+
+See [**CHANGELOG**](CHANGELOG.md) or [releases/tag/v1.2.0-alpha.1](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v1.2.0-alpha.1) for included fixes and new CLI behaviour (`--database`, `--explain`, config/events).
 
 ## Usage
 

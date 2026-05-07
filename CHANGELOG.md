@@ -4,14 +4,14 @@
 
 ## [v1.2.0-alpha.1](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v1.2.0-alpha.1)
 
-- [1.x] Defers the database/filesystem bootstrap from `__construct` to `handle()` so the package no longer hits the database on every artisan invocation.
-- [1.x] Replaces the filename heuristic with real `Schema::create` / `Schema::table` / `Schema::drop*` / `Schema::rename` parsing, captures **every** matching alter migration (fixes the previous `[0]`-only bug), and recursively scans nested migration folders, `--path` paths, and migrator-registered paths.
 - [1.x] Adds the `--database=` option and forwards it to the underlying `migrate` call.
 - [1.x] Adds the `--keep=` flag as an alias for the positional argument and supports glob patterns (e.g., `oauth_*`).
 - [1.x] Adds the `--explain` dry-run mode that previews the work without touching the database.
 - [1.x] Adds a publishable config file (`custom-fresh.php`) with `always_keep`, `patterns`, and `confirm_in` keys.
 - [1.x] Adds the `RefreshingDatabase`, `TablesDropped`, and `DatabaseRefreshed` lifecycle events.
 - [1.x] Wraps the `migrations` table reset inside the foreign-key-disabled block, uses `pathinfo` instead of `substr` to derive migration names, returns `Command::SUCCESS` / `Command::FAILURE` constants, and rewords the argument description.
+- [1.x] Defers the database/filesystem bootstrap from `__construct` to `handle()` so the package no longer hits the database on every artisan invocation.
+- [1.x] Fixed migration discovery by replacing filename heuristics with real `Schema::*` parsing, capturing all matching alter migrations, and scanning nested and registered migration paths.
 
 ## [v1.1.9](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v1.1.9)
 
