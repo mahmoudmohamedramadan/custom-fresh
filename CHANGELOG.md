@@ -11,7 +11,7 @@
 - [1.x] Adds the `RefreshingDatabase`, `TablesDropped`, and `DatabaseRefreshed` lifecycle events.
 - [1.x] Wraps the `migrations` table reset inside the foreign-key-disabled block, uses `pathinfo` instead of `substr` to derive migration names, returns `Command::SUCCESS` / `Command::FAILURE` constants, and rewords the argument description.
 - [1.x] Defers the database/filesystem bootstrap from `__construct` to `handle()` so the package no longer hits the database on every artisan invocation.
-- [1.x] Fixed migration discovery by replacing filename heuristics with real `Schema::*` parsing, capturing all matching alter migrations, and scanning nested and registered migration paths.
+- [1.x] Fixes migration discovery by replacing filename heuristics with real `Schema::*` parsing, capturing all matching alter migrations, and scanning nested and registered migration paths.
 
 ## [v1.1.9](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v1.1.9)
 
