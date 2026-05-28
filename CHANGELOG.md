@@ -1,8 +1,8 @@
 # Release Notes for 1.x
 
-## [Unreleased](https://github.com/mahmoudmohamedramadan/custom-fresh/compare/v1.2.0-alpha.1...1.x)
+## [Unreleased](https://github.com/mahmoudmohamedramadan/custom-fresh/compare/v1.2.0...1.x)
 
-## [v1.2.0-alpha.1](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v1.2.0-alpha.1)
+## [v1.2.0](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v1.2.0)
 
 - [1.x] Adds the `--database=` option and forwards it to the underlying `migrate` call.
 - [1.x] Adds the `--keep=` flag as an alias for the positional argument and supports glob patterns (e.g., `oauth_*`).
