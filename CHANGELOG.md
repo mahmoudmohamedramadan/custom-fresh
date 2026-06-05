@@ -1,6 +1,11 @@
 # Release Notes for 1.x
 
-## [Unreleased](https://github.com/mahmoudmohamedramadan/custom-fresh/compare/v1.2.2...1.x)
+## [Unreleased](https://github.com/mahmoudmohamedramadan/custom-fresh/compare/v1.2.3...1.x)
+
+## [v1.2.3](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v1.2.3)
+
+- [1.x] Fixes table discovery by passing the current schema listing to `Schema::getTables()` instead of the database name.
+- [1.x] Fixes the forwarded `migrate` call to pass the connection name to `--database` rather than the database name.
 
 ## [v1.2.2](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v1.2.2)
 
