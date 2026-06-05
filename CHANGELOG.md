@@ -1,6 +1,11 @@
 # Release Notes for 1.x
 
-## [Unreleased](https://github.com/mahmoudmohamedramadan/custom-fresh/compare/v1.2.1...1.x)
+## [Unreleased](https://github.com/mahmoudmohamedramadan/custom-fresh/compare/v1.2.2...1.x)
+
+## [v1.2.2](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v1.2.2)
+
+- [1.x] Refactors `RefreshingDatabase`, `TablesDropped`, and `DatabaseRefreshed` to expose `$connection` and `$database`, and updates their constructor argument order accordingly.
+- [1.x] Resolves the booted connection and database name from `--database`, passes the database name to `Schema::getTables()` and the underlying `migrate` call, prints both in `--explain` output, and dispatches lifecycle events with the resolved values so table discovery, drops, and migrations target the correct database.
 
 ## [v1.2.1](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v1.2.1)
 
