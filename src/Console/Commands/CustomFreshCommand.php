@@ -147,18 +147,18 @@ class CustomFreshCommand extends Command
             return $this->explainPlan($tables, $migrations);
         }
 
-        event(new RefreshingDatabase($tables, $migrations, $this->connectionName()));
+        event(new RefreshingDatabase($this->connectionName(), $this->databaseName(), $migrations, $tables));
 
         $this->components->task('Dropping the tables', function () use ($migrations, $tables) {
             $this->refreshMigrationsTable($migrations);
             $this->dropUnmanagedTables($tables);
         });
 
-        event(new TablesDropped($tables, $this->lastDroppedTables(), $this->connectionName()));
+        event(new TablesDropped($this->connectionName(), $this->databaseName(), $tables, $this->lastDroppedTables()));
 
         $this->runMigrateCommand();
 
-        event(new DatabaseRefreshed($tables, $this->connectionName()));
+        event(new DatabaseRefreshed($this->connectionName(), $this->databaseName(), $tables));
 
         return self::SUCCESS;
     }
@@ -170,10 +170,10 @@ class CustomFreshCommand extends Command
      */
     protected function bootResources()
     {
-        $connectionName = $this->connectionName();
+        $requested = $this->option('database');
 
-        $this->connection = $connectionName
-            ? Schema::connection($connectionName)->getConnection()
+        $this->connection = $requested
+            ? Schema::connection($requested)->getConnection()
             : Schema::getConnection();
 
         $this->grammar = $this->connection->getSchemaGrammar();
@@ -369,7 +369,11 @@ class CustomFreshCommand extends Command
 
         $this->components->twoColumnDetail(
             '<fg=cyan>Connection</>',
-            $this->connection->getName()
+            $this->connectionName()
+        );
+        $this->components->twoColumnDetail(
+            '<fg=cyan>Database</>',
+            $this->databaseName()
         );
         $this->components->twoColumnDetail(
             '<fg=green>Tables to preserve</>',
@@ -445,15 +449,23 @@ class CustomFreshCommand extends Command
     }
 
     /**
-     * Get the resolved connection name, or null for the default connection.
+     * Get the resolved connection name.
      *
-     * @return string|null
+     * @return string
      */
     protected function connectionName()
     {
-        $name = $this->option('database');
+        return $this->connection->getName();
+    }
 
-        return is_string($name) && $name !== '' ? $name : null;
+    /**
+     * Get the resolved database name.
+     *
+     * @return string
+     */
+    protected function databaseName()
+    {
+        return $this->connection->getDatabaseName();
     }
 
     /**
@@ -463,7 +475,7 @@ class CustomFreshCommand extends Command
      */
     protected function getTables()
     {
-        return Schema::connection($this->connection->getName())->getTables();
+        return Schema::connection($this->connectionName())->getTables($this->databaseName());
     }
 
     /**
@@ -494,11 +506,8 @@ class CustomFreshCommand extends Command
             '--seed'        => $this->option('seed'),
             '--seeder'      => $this->option('seeder'),
             '--step'        => $this->option('step'),
+            '--database'    => $this->databaseName(),
         ];
-
-        if ($connection = $this->connectionName()) {
-            $arguments['--database'] = $connection;
-        }
 
         $this->call('migrate', $arguments);
     }
