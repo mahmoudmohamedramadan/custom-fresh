@@ -1,6 +1,10 @@
 # Release Notes for 1.x
 
-## [Unreleased](https://github.com/mahmoudmohamedramadan/custom-fresh/compare/v1.2.0...1.x)
+## [Unreleased](https://github.com/mahmoudmohamedramadan/custom-fresh/compare/v1.2.1...1.x)
+
+## [v1.2.1](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v1.2.1)
+
+- [1.x] Fixes SQLite table discovery by using `Schema::getTables()` instead of grammar-specific queries, ensuring tables are correctly detected and dropped in Laravel 11+.
 
 ## [v1.2.0](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v1.2.0)
 
