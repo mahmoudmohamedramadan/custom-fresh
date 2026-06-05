@@ -5,6 +5,20 @@ namespace Ramadan\CustomFresh\Events;
 class DatabaseRefreshed
 {
     /**
+     * The database connection name.
+     *
+     * @var string
+     */
+    public string $connection;
+
+    /**
+     * The database name.
+     *
+     * @var string
+     */
+    public string $database;
+
+    /**
      * The tables that were preserved.
      *
      * @var array
@@ -12,22 +26,17 @@ class DatabaseRefreshed
     public array $preserved;
 
     /**
-     * The database connection name (or null for the default).
-     *
-     * @var string|null
-     */
-    public ?string $connection;
-
-    /**
      * Create a new DatabaseRefreshed event instance.
      *
+     * @param  string  $connection
+     * @param  string  $database
      * @param  array  $preserved
-     * @param  string|null  $connection
      * @return void
      */
-    public function __construct(array $preserved, ?string $connection = null)
+    public function __construct(string $connection, string $database, array $preserved)
     {
-        $this->preserved  = $preserved;
         $this->connection = $connection;
+        $this->database   = $database;
+        $this->preserved  = $preserved;
     }
 }

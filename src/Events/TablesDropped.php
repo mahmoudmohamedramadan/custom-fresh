@@ -5,6 +5,20 @@ namespace Ramadan\CustomFresh\Events;
 class TablesDropped
 {
     /**
+     * The database connection name.
+     *
+     * @var string
+     */
+    public string $connection;
+
+    /**
+     * The database name.
+     *
+     * @var string
+     */
+    public string $database;
+
+    /**
      * The tables that were preserved.
      *
      * @var array
@@ -19,24 +33,19 @@ class TablesDropped
     public array $dropped;
 
     /**
-     * The database connection name (or null for the default).
-     *
-     * @var string|null
-     */
-    public ?string $connection;
-
-    /**
      * Create a new TablesDropped event instance.
      *
+     * @param  string  $connection
+     * @param  string  $database
      * @param  array  $preserved
      * @param  array  $dropped
-     * @param  string|null  $connection
      * @return void
      */
-    public function __construct(array $preserved, array $dropped, ?string $connection = null)
+    public function __construct(string $connection, string $database, array $preserved, array $dropped)
     {
+        $this->connection = $connection;
+        $this->database   = $database;
         $this->preserved  = $preserved;
         $this->dropped    = $dropped;
-        $this->connection = $connection;
     }
 }

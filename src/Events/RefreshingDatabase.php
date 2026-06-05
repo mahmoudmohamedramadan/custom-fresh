@@ -5,11 +5,18 @@ namespace Ramadan\CustomFresh\Events;
 class RefreshingDatabase
 {
     /**
-     * The tables that will be preserved.
+     * The database connection name.
      *
-     * @var array
+     * @var string
      */
-    public array $preserved;
+    public string $connection;
+
+    /**
+     * The database name.
+     *
+     * @var string
+     */
+    public string $database;
 
     /**
      * The migration filenames that will be marked as already-run.
@@ -19,24 +26,26 @@ class RefreshingDatabase
     public array $migrations;
 
     /**
-     * The database connection name (or null for the default).
+     * The tables that will be preserved.
      *
-     * @var string|null
+     * @var array
      */
-    public ?string $connection;
+    public array $preserved;
 
     /**
      * Create a new RefreshingDatabase event instance.
      *
-     * @param  array  $preserved
+     * @param  string  $connection
+     * @param  string  $database
      * @param  array  $migrations
-     * @param  string|null  $connection
+     * @param  array  $preserved
      * @return void
      */
-    public function __construct(array $preserved, array $migrations, ?string $connection = null)
+    public function __construct(string $connection, string $database, array $migrations, array $preserved)
     {
-        $this->preserved  = $preserved;
-        $this->migrations = $migrations;
         $this->connection = $connection;
+        $this->database   = $database;
+        $this->migrations = $migrations;
+        $this->preserved  = $preserved;
     }
 }
