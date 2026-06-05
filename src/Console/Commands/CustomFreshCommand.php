@@ -178,7 +178,7 @@ class CustomFreshCommand extends Command
 
         $this->grammar = $this->connection->getSchemaGrammar();
 
-        $this->tables = $this->extractTableNames($this->processTables(), 'name');
+        $this->tables = $this->extractTableNames($this->getTables(), 'name');
 
         $this->scanner = new MigrationFileScanner;
 
@@ -457,17 +457,13 @@ class CustomFreshCommand extends Command
     }
 
     /**
-     * Process the results of a tables query.
+     * Retrieve all tables from the connection.
      *
      * @return array<int, array<string, mixed>>
      */
-    protected function processTables()
+    protected function getTables()
     {
-        return $this->connection->getPostProcessor()->processTables(
-            $this->connection->selectFromWriteConnection(
-                $this->grammar->compileTables($this->connection->getDatabaseName())
-            )
-        );
+        return Schema::connection($this->connection->getName())->getTables();
     }
 
     /**
