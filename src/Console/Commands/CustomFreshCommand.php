@@ -24,6 +24,7 @@ class CustomFreshCommand extends Command
     protected $signature = 'fresh:custom
                 {tables? : Tables to preserve (comma-separated, supports glob patterns like "oauth_*")}
                 {--keep= : Alternative to the positional argument; comma-separated list of tables/patterns to preserve}
+                {--explain : Show what would happen without dropping or migrating anything}
                 {--database= : The database connection to use}
                 {--force : Force the operation to run when in production}
                 {--path=* : The path(s) to the migrations files to be executed}
@@ -33,8 +34,7 @@ class CustomFreshCommand extends Command
                 {--seed : Indicates if the seed task should be re-run}
                 {--seeder= : The class name of the root seeder}
                 {--step : Force the migrations to be run so they can be rolled back individually}
-                {--graceful : Return a successful exit code even if an error occurs}
-                {--explain : Show what would happen without dropping or migrating anything}';
+                {--graceful : Return a successful exit code even if an error occurs}';
 
     /**
      * The console command description.
@@ -475,7 +475,9 @@ class CustomFreshCommand extends Command
      */
     protected function getTables()
     {
-        return Schema::connection($this->connectionName())->getTables($this->databaseName());
+        $schema = Schema::connection($this->connectionName());
+
+        return $schema->getTables($schema->getCurrentSchemaListing());
     }
 
     /**
@@ -498,6 +500,7 @@ class CustomFreshCommand extends Command
     protected function runMigrateCommand()
     {
         $arguments = [
+            '--database'    => $this->connectionName(),
             '--force'       => true,
             '--path'        => $this->option('path'),
             '--realpath'    => $this->option('realpath'),
@@ -506,7 +509,6 @@ class CustomFreshCommand extends Command
             '--seed'        => $this->option('seed'),
             '--seeder'      => $this->option('seeder'),
             '--step'        => $this->option('step'),
-            '--database'    => $this->databaseName(),
         ];
 
         $this->call('migrate', $arguments);
