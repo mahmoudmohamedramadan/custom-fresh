@@ -147,18 +147,21 @@ class CustomFreshCommand extends Command
             return $this->explainPlan($tables, $migrations);
         }
 
-        event(new RefreshingDatabase($this->connectionName(), $this->databaseName(), $migrations, $tables));
+        $connectionName = $this->getConnectionName();
+        $databaseName   = $this->getDatabaseName();
+
+        event(new RefreshingDatabase($connectionName, $databaseName, $migrations, $tables));
 
         $this->components->task('Dropping the tables', function () use ($migrations, $tables) {
             $this->refreshMigrationsTable($migrations);
             $this->dropUnmanagedTables($tables);
         });
 
-        event(new TablesDropped($this->connectionName(), $this->databaseName(), $tables, $this->lastDroppedTables()));
+        event(new TablesDropped($connectionName, $databaseName, $tables, $this->lastDroppedTables()));
 
         $this->runMigrateCommand();
 
-        event(new DatabaseRefreshed($this->connectionName(), $this->databaseName(), $tables));
+        event(new DatabaseRefreshed($connectionName, $databaseName, $tables));
 
         return self::SUCCESS;
     }
@@ -291,7 +294,7 @@ class CustomFreshCommand extends Command
      */
     protected function refreshMigrationsTable(array $migrations)
     {
-        $connection = $this->connectionName();
+        $connection = $this->getConnectionName();
 
         Schema::connection($connection)->disableForeignKeyConstraints();
 
@@ -321,7 +324,7 @@ class CustomFreshCommand extends Command
      */
     protected function dropUnmanagedTables(array $keep)
     {
-        $connection = $this->connectionName();
+        $connection = $this->getConnectionName();
 
         $toDrop = array_values(array_diff(
             $this->tables,
@@ -369,11 +372,11 @@ class CustomFreshCommand extends Command
 
         $this->components->twoColumnDetail(
             '<fg=cyan>Connection</>',
-            $this->connectionName()
+            $this->getConnectionName()
         );
         $this->components->twoColumnDetail(
             '<fg=cyan>Database</>',
-            $this->databaseName()
+            $this->getDatabaseName()
         );
         $this->components->twoColumnDetail(
             '<fg=green>Tables to preserve</>',
@@ -453,7 +456,7 @@ class CustomFreshCommand extends Command
      *
      * @return string
      */
-    protected function connectionName()
+    protected function getConnectionName()
     {
         return $this->connection->getName();
     }
@@ -463,7 +466,7 @@ class CustomFreshCommand extends Command
      *
      * @return string
      */
-    protected function databaseName()
+    protected function getDatabaseName()
     {
         return $this->connection->getDatabaseName();
     }
@@ -475,7 +478,7 @@ class CustomFreshCommand extends Command
      */
     protected function getTables()
     {
-        $schema = Schema::connection($this->connectionName());
+        $schema = Schema::connection($this->getConnectionName());
 
         if (version_compare($this->laravel->version(), '12.0.0', '>=')) {
             return $schema->getTables($schema->getCurrentSchemaListing());
@@ -504,7 +507,7 @@ class CustomFreshCommand extends Command
     protected function runMigrateCommand()
     {
         $arguments = [
-            '--database'    => $this->connectionName(),
+            '--database'    => $this->getConnectionName(),
             '--force'       => true,
             '--path'        => $this->option('path'),
             '--realpath'    => $this->option('realpath'),
