@@ -477,7 +477,11 @@ class CustomFreshCommand extends Command
     {
         $schema = Schema::connection($this->connectionName());
 
-        return $schema->getTables($schema->getCurrentSchemaListing());
+        if (version_compare($this->laravel->version(), '12.0.0', '>=')) {
+            return $schema->getTables($schema->getCurrentSchemaListing());
+        }
+
+        return $schema->getTables();
     }
 
     /**
