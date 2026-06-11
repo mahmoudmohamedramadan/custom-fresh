@@ -1,6 +1,12 @@
-# Release Notes for 1.x
+# Release Notes for 2.x
 
-## [Unreleased](https://github.com/mahmoudmohamedramadan/custom-fresh/compare/v1.2.3...1.x)
+## [Unreleased](https://github.com/mahmoudmohamedramadan/custom-fresh/compare/v2.0.0-alpha.1...2.x)
+
+## [v2.0.0-alpha.1](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v2.0.0-alpha.1)
+
+- [2.x] Replaces the direct dependency on `laravel/framework` with specific `illuminate/*` components to support Laravel versions 10.0 through 13.0.
+
+----
 
 ## [v1.2.3](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v1.2.3)
 
