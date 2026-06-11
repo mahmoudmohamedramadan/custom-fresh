@@ -1,6 +1,11 @@
 # Release Notes for 2.x
 
-## [Unreleased](https://github.com/mahmoudmohamedramadan/custom-fresh/compare/v2.0.0-alpha.1...2.x)
+## [Unreleased](https://github.com/mahmoudmohamedramadan/custom-fresh/compare/v2.0.0-beta.1...2.x)
+
+## [v2.0.0-beta.1](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v2.0.0-beta.1)
+
+- [2.x] Enhances table discovery for Laravel 12+ by conditionally using `getCurrentSchemaListing()` when available.
+- [2.x] Refactors connection and database resolution to use dedicated methods, improving clarity and consistency across table operations and lifecycle events.
 
 ## [v2.0.0-alpha.1](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v2.0.0-alpha.1)
 
