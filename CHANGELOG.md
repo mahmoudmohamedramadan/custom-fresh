@@ -11,7 +11,7 @@
 
 - [2.x] Replaces the direct dependency on `laravel/framework` with specific `illuminate/*` components to support Laravel versions 10.0 through 13.0.
 
-----
+---
 
 ## [v1.2.3](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v1.2.3)
 
