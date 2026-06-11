@@ -31,8 +31,10 @@
     ],
     "require": {
         "php": "^8.2",
-        "laravel/framework": "^10.0|^11.0|^12.0|^13.0",
-        "ext-pdo": "*"
+        "ext-pdo": "*",
+        "illuminate/support": "^10.0|^11.0|^12.0|^13.0",
+        "illuminate/console": "^10.0|^11.0|^12.0|^13.0",
+        "illuminate/database": "^10.0|^11.0|^12.0|^13.0"
     },
     "autoload": {
         "psr-4": {
