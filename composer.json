@@ -36,10 +36,22 @@
         "illuminate/console": "^10.0|^11.0|^12.0|^13.0",
         "illuminate/database": "^10.0|^11.0|^12.0|^13.0"
     },
+    "require-dev": {
+        "orchestra/testbench": "^8.36 || ^9.15 || ^10.1 || ^11.0",
+        "phpunit/phpunit": "^10.5 || ^11.5 || ^12.0"
+    },
     "autoload": {
         "psr-4": {
             "Ramadan\\CustomFresh\\": "src/"
         }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Ramadan\\CustomFresh\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit"
     },
     "extra": {
         "laravel": {

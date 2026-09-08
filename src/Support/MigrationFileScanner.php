@@ -16,6 +16,20 @@ class MigrationFileScanner
     protected array $cache = [];
 
     /**
+     * Cache of tables created (Schema::create) by absolute file path.
+     *
+     * @var array<string, array<int, string>>
+     */
+    protected array $createdCache = [];
+
+    /**
+     * Absolute paths indexed by basename.
+     *
+     * @var array<string, string>
+     */
+    protected array $pathByBasename = [];
+
+    /**
      * Recursively collect all *.php migration files under the given paths.
      *
      * @param  array<int, string>  $paths
@@ -36,7 +50,9 @@ class MigrationFileScanner
 
             foreach ($iterator as $file) {
                 if ($file->isFile() && strtolower($file->getExtension()) === 'php') {
-                    $files[] = $file->getPathname();
+                    $pathname = $file->getPathname();
+                    $files[]  = $pathname;
+                    $this->pathByBasename[basename($pathname)] = $pathname;
                 }
             }
         }
@@ -76,6 +92,64 @@ class MigrationFileScanner
         }
 
         return $this->cache[$file] = $tables;
+    }
+
+    /**
+     * Resolve a basename or path to an absolute file path when known.
+     *
+     * @param  string  $file
+     * @return string
+     */
+    public function fullPath(string $file)
+    {
+        if (is_file($file)) {
+            return $file;
+        }
+
+        return $this->pathByBasename[$file] ?? $file;
+    }
+
+    /**
+     * Return table names created by Schema::create in the given file.
+     *
+     * @param  string  $file
+     * @return array<int, string>
+     */
+    public function createdTables(string $file)
+    {
+        $file = $this->fullPath($file);
+
+        if (array_key_exists($file, $this->createdCache)) {
+            return $this->createdCache[$file];
+        }
+
+        $contents = @file_get_contents($file);
+
+        if ($contents === false || $contents === '') {
+            return $this->createdCache[$file] = [];
+        }
+
+        $pattern = '/Schema(?:::|\\s*->)\\s*(?:connection\\s*\\([^\\)]*\\)\\s*->\\s*)?'
+            . 'create'
+            . '\\s*\\(\\s*[\'"]([A-Za-z0-9_]+)[\'"]/i';
+
+        if (! preg_match_all($pattern, $contents, $matches)) {
+            return $this->createdCache[$file] = [];
+        }
+
+        return $this->createdCache[$file] = array_values(array_unique($matches[1]));
+    }
+
+    /**
+     * Determine whether the migration creates any of the given tables.
+     *
+     * @param  string  $file
+     * @param  array<int, string>  $tables
+     * @return bool
+     */
+    public function createsAny(string $file, array $tables)
+    {
+        return ! empty(array_intersect($this->createdTables($file), $tables));
     }
 
     /**

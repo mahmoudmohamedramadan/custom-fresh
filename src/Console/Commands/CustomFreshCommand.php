@@ -5,11 +5,17 @@ namespace Ramadan\CustomFresh\Console\Commands;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use InvalidArgumentException;
 use Ramadan\CustomFresh\Console\Confirmable;
 use Ramadan\CustomFresh\Events\DatabaseRefreshed;
 use Ramadan\CustomFresh\Events\RefreshingDatabase;
 use Ramadan\CustomFresh\Events\TablesDropped;
+use Ramadan\CustomFresh\Support\ConfigResolver;
+use Ramadan\CustomFresh\Support\ForeignKeyAdvisor;
+use Ramadan\CustomFresh\Support\ListUtil;
 use Ramadan\CustomFresh\Support\MigrationFileScanner;
+use Ramadan\CustomFresh\Support\RefreshPlan;
+use Ramadan\CustomFresh\Support\RefreshPlanBuilder;
 use Throwable;
 
 class CustomFreshCommand extends Command
@@ -24,7 +30,18 @@ class CustomFreshCommand extends Command
     protected $signature = 'fresh:custom
                 {tables? : Tables to preserve (comma-separated, supports glob patterns like "oauth_*")}
                 {--keep= : Alternative to the positional argument; comma-separated list of tables/patterns to preserve}
+                {--keep-raw= : Preserve tables even when they have no migration files}
+                {--except= : Tables/patterns to drop even if they appear in always_keep or --keep}
+                {--drop= : Drop only these tables (everything else is preserved)}
+                {--preset= : Named preset(s) from config/custom-fresh.php}
+                {--freeze-schema : Mark every migration for kept tables as run (skip pending alters)}
+                {--with-related : Also preserve tables linked by foreign keys}
                 {--explain : Show what would happen without dropping or migrating anything}
+                {--list : List discovered tables and the migration files that touch them}
+                {--json : Output --explain / --list as JSON}
+                {--seed-fresh : Seed only dropped tables using config "table_seeders"}
+                {--drop-views : Drop all views during the refresh}
+                {--drop-types : Drop all types during the refresh (PostgreSQL)}
                 {--database= : The database connection to use}
                 {--force : Force the operation to run when in production}
                 {--path=* : The path(s) to the migrations files to be executed}
@@ -86,11 +103,18 @@ class CustomFreshCommand extends Command
     protected MigrationFileScanner $scanner;
 
     /**
-     * The list of tables that were dropped.
+     * Config resolver for the current connection.
      *
-     * @var array<int, string>
+     * @var \Ramadan\CustomFresh\Support\ConfigResolver
      */
-    protected array $lastDroppedCache = [];
+    protected ConfigResolver $configResolver;
+
+    /**
+     * The resolved refresh plan.
+     *
+     * @var \Ramadan\CustomFresh\Support\RefreshPlan|null
+     */
+    protected ?RefreshPlan $plan = null;
 
     /**
      * Execute the console command.
@@ -99,12 +123,22 @@ class CustomFreshCommand extends Command
      */
     public function handle()
     {
-        if (! $this->confirmToProceed()) {
-            return self::FAILURE;
-        }
-
         try {
+            $this->bootResources();
+
+            if ($this->option('list')) {
+                return $this->renderList();
+            }
+
+            if (! $this->option('explain') && ! $this->confirmToProceed()) {
+                return self::FAILURE;
+            }
+
             return $this->runRefresh();
+        } catch (InvalidArgumentException $e) {
+            $this->components->error($e->getMessage());
+
+            return $this->option('graceful') ? self::SUCCESS : self::FAILURE;
         } catch (Throwable $e) {
             if (! $this->option('graceful')) {
                 throw $e;
@@ -123,14 +157,15 @@ class CustomFreshCommand extends Command
      */
     protected function runRefresh()
     {
-        $this->bootResources();
+        // The plan also keeps tables that share a Schema::create migration
+        // with a preserved table (e.g. users + sessions) so later foreign
+        // keys are not left pointing at a dropped sibling.
+        $this->plan = $this->makePlanBuilder()->build($this->planInput());
 
-        $requested = $this->resolveRequestedTables();
-
-        if (empty($requested)) {
+        if ($this->plan->isEmpty()) {
             $this->components->warn(
-                'No tables to preserve were resolved. '
-                    . 'Pass tables/patterns via the argument or "--keep=", '
+                'No tables to preserve or drop were resolved. '
+                    . 'Pass tables via the argument, "--keep=", "--drop=", or "--preset=", '
                     . 'set "always_keep"/"patterns" in config/custom-fresh.php, '
                     . 'or use "php artisan migrate:fresh" for a full reset.'
             );
@@ -138,28 +173,40 @@ class CustomFreshCommand extends Command
             return self::FAILURE;
         }
 
-        $databaseMap = $this->buildDatabaseMap($requested);
-
-        $migrations = $databaseMap['migrations'];
-        $tables     = $databaseMap['tables'];
-
         if ($this->option('explain')) {
-            return $this->explainPlan($tables, $migrations);
+            return $this->explainPlan($this->plan);
+        }
+
+        $this->renderMessages($this->plan);
+
+        if ($this->option('seed') && ! $this->option('seed-fresh') && ! empty($this->plan->preserved)) {
+            $this->components->warn(
+                'Preserved tables still contain data. DatabaseSeeder may insert duplicates. '
+                    . 'Use "--seed-fresh" with config "table_seeders", or make seeders idempotent.'
+            );
         }
 
         $connectionName = $this->getConnectionName();
         $databaseName   = $this->getDatabaseName();
+        $migrations     = $this->plan->migrations;
+        $tables         = $this->plan->preserved;
 
         event(new RefreshingDatabase($connectionName, $databaseName, $migrations, $tables));
+
+        $this->dropViewsAndTypes(true);
 
         $this->components->task('Dropping the tables', function () use ($migrations, $tables) {
             $this->refreshMigrationsTable($migrations);
             $this->dropUnmanagedTables($tables);
         });
 
-        event(new TablesDropped($connectionName, $databaseName, $tables, $this->lastDroppedTables()));
+        $this->dropViewsAndTypes(false);
+
+        event(new TablesDropped($connectionName, $databaseName, $tables, $this->plan->dropped));
 
         $this->runMigrateCommand();
+
+        $this->seedDroppedTables();
 
         event(new DatabaseRefreshed($connectionName, $databaseName, $tables));
 
@@ -181,6 +228,8 @@ class CustomFreshCommand extends Command
 
         $this->grammar = $this->connection->getSchemaGrammar();
 
+        $this->configResolver = new ConfigResolver($this->getConnectionName());
+
         $this->tables = $this->extractTableNames($this->getTables(), 'name');
 
         $this->scanner = new MigrationFileScanner;
@@ -196,94 +245,77 @@ class CustomFreshCommand extends Command
     }
 
     /**
-     * Resolve the final list of tables the user wants to keep.
+     * Create a plan builder for the booted connection.
      *
-     * @return array<int, string>
+     * @return \Ramadan\CustomFresh\Support\RefreshPlanBuilder
      */
-    protected function resolveRequestedTables()
+    protected function makePlanBuilder()
     {
-        $positional = (string) ($this->argument('tables') ?? '');
-        $option     = (string) ($this->option('keep') ?? '');
-        $configured = (array) config('custom-fresh.always_keep', []);
-        $patterns   = (array) config('custom-fresh.patterns', []);
-
-        $items = array_merge(
-            $this->splitList($positional),
-            $this->splitList($option),
-            array_map('strval', $configured),
-            array_map('strval', $patterns)
+        return new RefreshPlanBuilder(
+            $this->scanner,
+            $this->configResolver,
+            new ForeignKeyAdvisor($this->getConnectionName()),
+            $this->tables,
+            $this->migrationsByTable,
+            $this->appliedMigrationNames()
         );
-
-        $resolved = [];
-
-        foreach (array_unique(array_filter($items)) as $item) {
-            if ($this->isGlob($item)) {
-                foreach ($this->tables as $table) {
-                    if (fnmatch($item, $table)) {
-                        $resolved[] = $table;
-                    }
-                }
-                continue;
-            }
-
-            $resolved[] = $item;
-        }
-
-        return array_values(array_unique($resolved));
     }
 
     /**
-     * Build the preserve plan for tables to keep and migration rows to pre-insert.
+     * Collect CLI input for the plan builder.
      *
-     * @param  array<int, string>  $requested
-     * @return array{tables: array<int, string>, migrations: array<int, string>}
+     * @return array<string, mixed>
      */
-    protected function buildDatabaseMap(array $requested)
+    protected function planInput()
     {
-        $map = ['tables' => [], 'migrations' => []];
+        return [
+            'keep'            => array_merge(
+                ListUtil::split((string) ($this->argument('tables') ?? '')),
+                ListUtil::split((string) ($this->option('keep') ?? ''))
+            ),
+            'keepRaw'         => ListUtil::split((string) ($this->option('keep-raw') ?? '')),
+            'except'          => ListUtil::split((string) ($this->option('except') ?? '')),
+            'drop'            => ListUtil::split((string) ($this->option('drop') ?? '')),
+            'presets'         => ListUtil::split((string) ($this->option('preset') ?? '')),
+            'freezeSchema'    => (bool) $this->option('freeze-schema'),
+            'withRelated'     => (bool) $this->option('with-related'),
+            'interactive'     => $this->input->isInteractive(),
+            'pickTables'      => fn(array $candidates) => $this->promptTablesToKeep($candidates),
+            'pickReplacement' => fn(string $invalid, array $candidates) => $this->choice(
+                "Choose the correct table instead ({$invalid})",
+                $candidates
+            ),
+        ];
+    }
 
-        foreach ($requested as $table) {
-            if (! array_key_exists($table, $this->migrationsByTable)) {
-                // Offer ONLY tables that own migration files, so the user
-                // cannot accidentally pick something like "sessions" on
-                // Laravel v11 (no migration file shipped) -- preserving
-                // such a table without inserting a corresponding
-                // migrations row would let a later migration re-create it
-                // and crash the migrate step with a "table already
-                // exists" exception.
-                $candidates = array_values(array_diff(
-                    $this->tablesOwningMigrations,
-                    $map['tables'],
-                    ['migrations']
-                ));
-
-                if (empty($candidates)) {
-                    $this->components->warn("No migration matches table [{$table}]. Skipping.");
-                    continue;
-                }
-
-                if (! $this->input->isInteractive()) {
-                    $this->components->warn("Skipping unknown table [{$table}] (--no-interaction).");
-                    continue;
-                }
-
-                $table = $this->choice("Choose the correct table instead ({$table})", $candidates);
-            }
-
-            $migrations = $this->migrationsByTable[$table] ?? [];
-
-            if (empty($migrations)) {
-                continue;
-            }
-
-            $map['tables'][]   = $table;
-            $map['migrations'] = array_merge($map['migrations'], $migrations);
+    /**
+     * Ask which tables should be preserved when nothing was specified.
+     *
+     * @param  array<int, string>  $candidates
+     * @return array<int, string>
+     */
+    protected function promptTablesToKeep(array $candidates)
+    {
+        if (! $this->input->isInteractive() || empty($candidates)) {
+            return [];
         }
 
-        $map['tables']     = array_values(array_unique(array_filter($map['tables'])));
-        $map['migrations'] = array_values(array_unique(array_filter($map['migrations'])));
+        if (function_exists('\Laravel\Prompts\multiselect')) {
+            return array_values(\Laravel\Prompts\multiselect(
+                label: 'Which tables should be preserved?',
+                options: array_combine($candidates, $candidates),
+                hint: 'Space to select, Enter to confirm.',
+                required: false,
+            ));
+        }
 
-        return $map;
+        $selected = $this->choice(
+            'Which tables should be preserved? (comma-separated indices if prompted)',
+            $candidates,
+            multiple: true
+        );
+
+        return array_values((array) $selected);
     }
 
     /**
@@ -326,12 +358,10 @@ class CustomFreshCommand extends Command
     {
         $connection = $this->getConnectionName();
 
-        $toDrop = array_values(array_diff(
+        $toDrop = $this->plan?->dropped ?? array_values(array_diff(
             $this->tables,
             array_merge($keep, ['migrations'])
         ));
-
-        $this->lastDroppedCache = $toDrop;
 
         Schema::connection($connection)->disableForeignKeyConstraints();
 
@@ -345,28 +375,83 @@ class CustomFreshCommand extends Command
     }
 
     /**
-     * Get the list of tables that were dropped.
+     * Drop views before tables, and types after tables, when requested.
      *
-     * @return array<int, string>
+     * @param  bool  $views
+     * @return void
      */
-    protected function lastDroppedTables()
+    protected function dropViewsAndTypes(bool $views)
     {
-        return $this->lastDroppedCache;
+        $connection = $this->getConnectionName();
+        $schema     = Schema::connection($connection);
+        $driver     = $this->connection->getDriverName();
+
+        if ($views && $this->option('drop-views') && method_exists($schema, 'dropAllViews')) {
+            $this->components->task('Dropping views', fn() => $schema->dropAllViews());
+        }
+
+        if (! $views && $this->option('drop-types') && method_exists($schema, 'dropAllTypes')) {
+            if (in_array($driver, ['pgsql', 'postgres'], true)) {
+                $this->components->task('Dropping types', fn() => $schema->dropAllTypes());
+            } else {
+                $this->components->warn("The \"--drop-types\" option is not supported by the [{$driver}] driver.");
+            }
+        }
     }
 
     /**
-     * Render a human-friendly summary of what would happen, without touching the database.
+     * Seed dropped tables using the configured table seeder map.
      *
-     * @param  array<int, string>  $keep
-     * @param  array<int, string>  $migrations
+     * @return void
+     */
+    protected function seedDroppedTables()
+    {
+        if (! $this->option('seed-fresh')) {
+            return;
+        }
+
+        $map     = (array) $this->configResolver->get('table_seeders', []);
+        $dropped = $this->plan?->dropped ?? [];
+        $ran     = 0;
+
+        foreach ($dropped as $table) {
+            if (! isset($map[$table]) || ! is_string($map[$table]) || $map[$table] === '') {
+                continue;
+            }
+
+            $this->call('db:seed', [
+                '--class'    => $map[$table],
+                '--force'    => true,
+                '--database' => $this->getConnectionName(),
+            ]);
+
+            $ran++;
+        }
+
+        if ($ran === 0) {
+            $this->components->warn(
+                'No "table_seeders" matched the dropped tables. '
+                    . 'Add mappings in config/custom-fresh.php.'
+            );
+        }
+    }
+
+    /**
+     * Render a human-friendly or JSON summary of what would happen.
+     *
+     * @param  \Ramadan\CustomFresh\Support\RefreshPlan  $plan
      * @return int
      */
-    protected function explainPlan(array $keep, array $migrations)
+    protected function explainPlan(RefreshPlan $plan)
     {
-        $drop = array_values(array_diff(
-            $this->tables,
-            array_merge($keep, ['migrations'])
-        ));
+        if ($this->option('json')) {
+            $this->output->writeln(json_encode(
+                $plan->toArray($this->getConnectionName(), $this->getDatabaseName()),
+                JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES
+            ));
+
+            return self::SUCCESS;
+        }
 
         $this->components->info('Custom Fresh — dry run (no changes will be applied)');
 
@@ -380,22 +465,108 @@ class CustomFreshCommand extends Command
         );
         $this->components->twoColumnDetail(
             '<fg=green>Tables to preserve</>',
-            empty($keep) ? '<fg=gray>none</>' : implode(', ', $keep)
+            empty($plan->preserved) ? '<fg=gray>none</>' : implode(', ', $plan->preserved)
         );
         $this->components->twoColumnDetail(
             '<fg=red>Tables to drop</>',
-            empty($drop) ? '<fg=gray>none</>' : implode(', ', $drop)
+            empty($plan->dropped) ? '<fg=gray>none</>' : implode(', ', $plan->dropped)
         );
         $this->components->twoColumnDetail(
             '<fg=yellow>Preserved migration rows</>',
-            (string) count($migrations)
+            (string) count($plan->migrations)
+        );
+        $this->components->twoColumnDetail(
+            '<fg=magenta>Pending alters on kept tables</>',
+            empty($plan->pendingAlters) ? '<fg=gray>none</>' : (string) count($plan->pendingAlters)
         );
 
-        if (! empty($migrations)) {
-            $this->components->bulletList($migrations);
+        if (! empty($plan->migrations)) {
+            $this->components->bulletList($plan->migrations);
+        }
+
+        if (! empty($plan->pendingAlters)) {
+            $this->newLine();
+            $this->components->info('These migrations still touch kept tables and will run:');
+            $this->components->bulletList($plan->pendingAlters);
+        }
+
+        $this->renderMessages($plan);
+
+        return self::SUCCESS;
+    }
+
+    /**
+     * Print the table-to-migration map.
+     *
+     * @return int
+     */
+    protected function renderList()
+    {
+        $map = [];
+
+        foreach ($this->tables as $table) {
+            if ($table === 'migrations') {
+                continue;
+            }
+
+            $map[$table] = $this->migrationsByTable[$table] ?? [];
+        }
+
+        ksort($map);
+
+        if ($this->option('json')) {
+            $this->output->writeln(json_encode($map, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+
+            return self::SUCCESS;
+        }
+
+        $this->components->info('Custom Fresh — discovered tables');
+
+        foreach ($map as $table => $migrations) {
+            $this->components->twoColumnDetail(
+                $table,
+                empty($migrations) ? '<fg=gray>no migration</>' : implode(', ', $migrations)
+            );
         }
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Print plan notes and warnings.
+     *
+     * @param  \Ramadan\CustomFresh\Support\RefreshPlan  $plan
+     * @return void
+     */
+    protected function renderMessages(RefreshPlan $plan)
+    {
+        foreach ($plan->notes as $note) {
+            $this->components->info($note);
+        }
+
+        foreach ($plan->warnings as $warning) {
+            $this->components->warn($warning);
+        }
+    }
+
+    /**
+     * Already-applied migration names from the migrations table.
+     *
+     * @return array<int, string>
+     */
+    protected function appliedMigrationNames()
+    {
+        $connection = $this->getConnectionName();
+
+        if (! Schema::connection($connection)->hasTable('migrations')) {
+            return [];
+        }
+
+        return DB::connection($connection)
+            ->table('migrations')
+            ->pluck('migration')
+            ->map(static fn($name) => (string) $name)
+            ->all();
     }
 
     /**
@@ -424,31 +595,6 @@ class CustomFreshCommand extends Command
         }
 
         return array_values(array_unique(array_filter($paths)));
-    }
-
-    /**
-     * Split a comma-separated string into a clean list of items.
-     *
-     * @param  string  $value
-     * @return array<int, string>
-     */
-    protected function splitList(string $value)
-    {
-        return array_values(array_filter(array_map(
-            static fn($item) => trim((string) $item),
-            explode(',', $value)
-        ), static fn($item) => $item !== ''));
-    }
-
-    /**
-     * Determine whether the given pattern should be matched as a glob.
-     *
-     * @param  string  $value
-     * @return bool
-     */
-    protected function isGlob(string $value)
-    {
-        return (bool) preg_match('/[\\*\\?\\[]/', $value);
     }
 
     /**
@@ -513,7 +659,7 @@ class CustomFreshCommand extends Command
             '--realpath'    => $this->option('realpath'),
             '--schema-path' => $this->option('schema-path'),
             '--pretend'     => $this->option('pretend'),
-            '--seed'        => $this->option('seed'),
+            '--seed'        => $this->option('seed') && ! $this->option('seed-fresh'),
             '--seeder'      => $this->option('seeder'),
             '--step'        => $this->option('step'),
         ];

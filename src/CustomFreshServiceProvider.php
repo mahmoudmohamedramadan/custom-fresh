@@ -2,7 +2,10 @@
 
 namespace Ramadan\CustomFresh;
 
+use Illuminate\Database\Console\Migrations\FreshCommand;
 use Illuminate\Support\ServiceProvider;
+use Ramadan\CustomFresh\Console\Commands\CustomFreshCommand;
+use Ramadan\CustomFresh\Console\Commands\WrappedMigrateFreshCommand;
 
 class CustomFreshServiceProvider extends ServiceProvider
 {
@@ -23,8 +26,20 @@ class CustomFreshServiceProvider extends ServiceProvider
         $this->mergeConfigFrom($this->configPath, 'custom-fresh');
 
         $this->commands([
-            \Ramadan\CustomFresh\Console\Commands\CustomFreshCommand::class,
+            CustomFreshCommand::class,
         ]);
+
+        if (class_exists(FreshCommand::class)) {
+            $this->app->extend(FreshCommand::class, function ($command, $app) {
+                return $app->make(WrappedMigrateFreshCommand::class);
+            });
+
+            if ($this->app->bound('command.migrate.fresh')) {
+                $this->app->extend('command.migrate.fresh', function ($command, $app) {
+                    return $app->make(WrappedMigrateFreshCommand::class);
+                });
+            }
+        }
     }
 
     /**

@@ -28,6 +28,24 @@
 
 - [1.x] Fixes SQLite table discovery by using `Schema::getTables()` instead of grammar-specific queries, ensuring tables are correctly detected and dropped in Laravel 11+.
 
+- [1.x] Preserves tables created by the same `Schema::create` migration as a kept table, so keeping `sessions` no longer drops `users` and breaks later foreign keys.
+- [1.x] Restores only already-applied migrations (and `Schema::create` files) for kept tables so pending alters still run.
+- [1.x] Adds the `--freeze-schema` option to mark every migration for kept tables as already run.
+- [1.x] Adds the `--keep-raw=` option to preserve tables that have no migration files.
+- [1.x] Adds the `--except=` option to drop tables that appear in `always_keep` or `--keep`.
+- [1.x] Adds the `--drop=` option to drop only the listed tables and preserve everything else.
+- [1.x] Adds the `--preset=` option to apply named table groups from the config.
+- [1.x] Adds the `--with-related` option to also preserve tables linked by foreign keys.
+- [1.x] Adds the `--list` option to print discovered tables and the migration files that touch them.
+- [1.x] Adds the `--json` option to print `--explain` and `--list` output as JSON.
+- [1.x] Adds the `--seed-fresh` option to seed only dropped tables using the `table_seeders` config map.
+- [1.x] Adds the `--drop-views` and `--drop-types` options to match Laravel's `migrate:fresh`.
+- [1.x] Adds the `keep_without_migrations`, `presets`, `table_seeders`, and `connections` config keys.
+- [1.x] Adds the `replace_migrate_fresh` config key so `migrate:fresh` can delegate to `fresh:custom`.
+- [1.x] Prompts interactively for tables when nothing is specified.
+- [1.x] Warns about foreign-key relationships that would break after the drop step.
+- [1.x] Adds PHPUnit and Orchestra Testbench coverage, with a GitHub Actions matrix for Laravel 10 through 13.
+
 ## [v1.2.0](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v1.2.0)
 
 - [1.x] Adds the `--database=` option and forwards it to the underlying `migrate` call.
