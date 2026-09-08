@@ -1,6 +1,26 @@
 # Release Notes for 2.x
 
-## [Unreleased](https://github.com/mahmoudmohamedramadan/custom-fresh/compare/v2.0.0...2.x)
+## [Unreleased](https://github.com/mahmoudmohamedramadan/custom-fresh/compare/v2.1.0-alpha.1...2.x)
+
+## [v2.1.0-alpha.1](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v2.1.0-alpha.1)
+
+- [2.x] Preserves tables created by the same `Schema::create` migration as a kept table, so keeping `sessions` no longer drops `users` and breaks later foreign keys.
+- [2.x] Restores only already-applied migrations (and `Schema::create` files) for kept tables so pending alters still run.
+- [2.x] Adds the `--freeze-schema` option to mark every migration for kept tables as already run.
+- [2.x] Adds the `--keep-raw=` option to preserve tables that have no migration files.
+- [2.x] Adds the `--except=` option to drop tables that appear in `always_keep` or `--keep`.
+- [2.x] Adds the `--drop=` option to drop only the listed tables and preserve everything else.
+- [2.x] Adds the `--preset=` option to apply named table groups from the config.
+- [2.x] Adds the `--with-related` option to also preserve tables linked by foreign keys.
+- [2.x] Adds the `--list` option to print discovered tables and the migration files that touch them.
+- [2.x] Adds the `--json` option to print `--explain` and `--list` output as JSON.
+- [2.x] Adds the `--seed-fresh` option to seed only dropped tables using the `table_seeders` config map.
+- [2.x] Adds the `--drop-views` and `--drop-types` options to match Laravel's `migrate:fresh`.
+- [2.x] Adds the `keep_without_migrations`, `presets`, `table_seeders`, and `connections` config keys.
+- [2.x] Adds the `replace_migrate_fresh` config key so `migrate:fresh` can delegate to `fresh:custom`.
+- [2.x] Prompts interactively for tables when nothing is specified.
+- [2.x] Warns about foreign-key relationships that would break after the drop step.
+- [2.x] Adds PHPUnit and Orchestra Testbench coverage, with a GitHub Actions matrix for Laravel 10 through 13.
 
 ## [v2.0.0](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v2.0.0)
 
