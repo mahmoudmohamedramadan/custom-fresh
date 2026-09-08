@@ -2,8 +2,10 @@
 
 namespace Ramadan\CustomFresh\Tests;
 
+use Illuminate\Database\Console\Migrations\FreshCommand;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Ramadan\CustomFresh\Console\Commands\WrappedMigrateFreshCommand;
 use Ramadan\CustomFresh\Tests\Fixtures\Seeders\PostSeeder;
 
 class CustomFreshCommandTest extends TestCase
@@ -275,6 +277,31 @@ class CustomFreshCommandTest extends TestCase
         $path = $this->migrateFixtures($this->baseMigrations);
 
         $this->freshCustom($path)->assertFailed();
+    }
+
+    public function test_migrate_fresh_command_can_be_resolved()
+    {
+        $command = $this->app->make(FreshCommand::class);
+
+        $this->assertInstanceOf(WrappedMigrateFreshCommand::class, $command);
+    }
+
+    public function test_migrate_fresh_wrapper_runs_laravel_fresh_when_disabled()
+    {
+        config()->set('custom-fresh.replace_migrate_fresh', false);
+
+        $path = $this->migrateFixtures($this->baseMigrations);
+        $this->seedKeptRow();
+
+        $this->artisan('migrate:fresh', [
+            '--path'     => [$path],
+            '--realpath' => true,
+            '--force'    => true,
+        ])->assertSuccessful();
+
+        $this->assertTrue(Schema::hasTable('cf_users'));
+        $this->assertSame(0, DB::table('cf_users')->count());
+        $this->assertSame(0, DB::table('cf_posts')->count());
     }
 
     public function test_migrate_fresh_wrapper_delegates_when_enabled()

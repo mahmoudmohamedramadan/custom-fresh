@@ -29,17 +29,42 @@ class CustomFreshServiceProvider extends ServiceProvider
             CustomFreshCommand::class,
         ]);
 
-        if (class_exists(FreshCommand::class)) {
-            $this->app->extend(FreshCommand::class, function ($command, $app) {
-                return $app->make(WrappedMigrateFreshCommand::class);
-            });
-
-            if ($this->app->bound('command.migrate.fresh')) {
-                $this->app->extend('command.migrate.fresh', function ($command, $app) {
-                    return $app->make(WrappedMigrateFreshCommand::class);
-                });
-            }
+        if (! class_exists(FreshCommand::class)) {
+            return;
         }
+
+        $wrap = function ($command, $app) {
+            return $this->wrapMigrateFreshCommand($command, $app);
+        };
+
+        $this->app->extend(FreshCommand::class, $wrap);
+        $this->app->extend('command.migrate.fresh', $wrap);
+    }
+
+    /**
+     * Replace Laravel's migrate:fresh command with the package wrapper.
+     *
+     * The wrapper must be constructed with the "migrator" singleton. Resolving
+     * it through auto-wiring would try to build Migrator from
+     * MigrationRepositoryInterface, which Laravel never binds.
+     *
+     * @param  mixed  $command
+     * @param  \Illuminate\Contracts\Foundation\Application  $app
+     * @return \Ramadan\CustomFresh\Console\Commands\WrappedMigrateFreshCommand
+     */
+    protected function wrapMigrateFreshCommand($command, $app)
+    {
+        if ($command instanceof WrappedMigrateFreshCommand) {
+            return $command;
+        }
+
+        $wrapped = new WrappedMigrateFreshCommand(
+            $app->bound('migrator') ? $app->make('migrator') : null
+        );
+
+        $wrapped->setLaravel($app);
+
+        return $wrapped;
     }
 
     /**

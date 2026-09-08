@@ -3,10 +3,39 @@
 namespace Ramadan\CustomFresh\Console\Commands;
 
 use Illuminate\Database\Console\Migrations\FreshCommand;
+use Illuminate\Database\Migrations\Migrator;
 use Ramadan\CustomFresh\Support\ConfigResolver;
+use ReflectionClass;
 
 class WrappedMigrateFreshCommand extends FreshCommand
 {
+    /**
+     * Create a new command instance.
+     *
+     * Laravel 10's FreshCommand has no constructor arguments. Laravel 11+
+     * requires the "migrator" singleton. Pass that binding explicitly —
+     * auto-wiring Migrator would fail because MigrationRepositoryInterface
+     * is never bound as a class.
+     *
+     * @param  \Illuminate\Database\Migrations\Migrator|null  $migrator
+     */
+    public function __construct(?Migrator $migrator = null)
+    {
+        $constructor = (new ReflectionClass(FreshCommand::class))->getConstructor();
+
+        if ($constructor === null) {
+            return;
+        }
+
+        if ($constructor->getDeclaringClass()->getName() === FreshCommand::class) {
+            $constructor->invokeArgs($this, [$migrator ?? app('migrator')]);
+
+            return;
+        }
+
+        $constructor->invokeArgs($this, []);
+    }
+
     /**
      * Execute the console command.
      *
