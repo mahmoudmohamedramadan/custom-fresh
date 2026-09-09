@@ -196,4 +196,25 @@ abstract class TestCase extends Orchestra
             '--no-interaction' => true,
         ], $options));
     }
+
+    /**
+     * Run fresh:custom without mocking stdout and return the printed output.
+     *
+     * @param  string  $path
+     * @param  array<string, mixed>  $options
+     * @return string
+     */
+    protected function freshCustomOutput(string $path, array $options = [])
+    {
+        $this->withoutMockingConsoleOutput();
+
+        $this->artisan('fresh:custom', array_merge([
+            '--path'           => [$path],
+            '--realpath'       => true,
+            '--force'          => true,
+            '--no-interaction' => true,
+        ], $options));
+
+        return $this->app[\Illuminate\Contracts\Console\Kernel::class]->output();
+    }
 }

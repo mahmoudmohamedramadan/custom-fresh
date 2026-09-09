@@ -3,7 +3,6 @@
 namespace Ramadan\CustomFresh\Tests;
 
 use Illuminate\Database\Console\Migrations\FreshCommand;
-use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Schema;
@@ -394,17 +393,11 @@ class CustomFreshCommandTest extends TestCase
 
         $path = $this->migrationPath($this->allMigrations);
 
-        $this->assertSame(0, Artisan::call('fresh:custom', [
-            '--keep'           => 'cf_users',
-            '--explain'        => true,
-            '--json'           => true,
-            '--path'           => [$path],
-            '--realpath'       => true,
-            '--force'          => true,
-            '--no-interaction' => true,
-        ]));
-
-        $output = Artisan::output();
+        $output = $this->freshCustomOutput($path, [
+            '--keep'    => 'cf_users',
+            '--explain' => true,
+            '--json'    => true,
+        ]);
 
         $this->assertStringContainsString('"pending_alters"', $output);
         $this->assertStringContainsString('add_phone_to_cf_users_table', $output);
@@ -415,16 +408,10 @@ class CustomFreshCommandTest extends TestCase
     {
         $path = $this->migrateFixtures($this->baseMigrations);
 
-        $this->assertSame(0, Artisan::call('fresh:custom', [
-            '--list'           => true,
-            '--json'           => true,
-            '--path'           => [$path],
-            '--realpath'       => true,
-            '--force'          => true,
-            '--no-interaction' => true,
-        ]));
-
-        $output = Artisan::output();
+        $output = $this->freshCustomOutput($path, [
+            '--list' => true,
+            '--json' => true,
+        ]);
 
         $this->assertStringContainsString('"cf_users"', $output);
         $this->assertStringContainsString('0001_01_01_000000_create_cf_users_table.php', $output);
