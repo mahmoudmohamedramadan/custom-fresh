@@ -72,6 +72,46 @@ PHP);
         $this->assertFalse($scanner->createsAny($file, ['invoices']));
     }
 
+    public function test_it_collects_migrations_from_nested_directories()
+    {
+        $directory = $this->tempDir();
+        $nested    = $directory . DIRECTORY_SEPARATOR . 'nested';
+        mkdir($nested);
+
+        $file = $nested . DIRECTORY_SEPARATOR . '0001_01_01_000000_create_widgets_table.php';
+
+        file_put_contents($file, <<<'PHP'
+<?php
+use Illuminate\Support\Facades\Schema;
+Schema::create('widgets', function () {});
+PHP);
+
+        $scanner = new MigrationFileScanner;
+        $files   = $scanner->collect([$directory]);
+
+        $this->assertCount(1, $files);
+        $this->assertSame(['widgets'], $scanner->tablesIn($files[0]));
+        $this->assertSame(['widgets'], $scanner->createdTables($files[0]));
+    }
+
+    public function test_it_reads_schema_connection_calls()
+    {
+        $directory = $this->tempDir();
+        $file      = $directory . '/0001_01_01_000000_create_orders_table.php';
+
+        file_put_contents($file, <<<'PHP'
+<?php
+use Illuminate\Support\Facades\Schema;
+Schema::connection('tenant')->create('orders', function () {});
+Schema::connection('tenant')->table('orders', function () {});
+PHP);
+
+        $scanner = new MigrationFileScanner;
+
+        $this->assertSame(['orders'], $scanner->tablesIn($file));
+        $this->assertSame(['orders'], $scanner->createdTables($file));
+    }
+
     /**
      * Create a temporary directory for scanner fixtures.
      *

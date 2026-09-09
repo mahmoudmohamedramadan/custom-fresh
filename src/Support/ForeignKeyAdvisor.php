@@ -51,7 +51,11 @@ class ForeignKeyAdvisor
             }
 
             foreach ((array) $keys as $key) {
-                $parent = $key['foreign_table'] ?? $key['foreignTable'] ?? null;
+                $parent = $key['foreign_table']
+                    ?? $key['foreignTable']
+                    ?? $key['foreign_table_name']
+                    ?? $key['table']
+                    ?? null;
 
                 if (! is_string($parent) || $parent === '') {
                     continue;
