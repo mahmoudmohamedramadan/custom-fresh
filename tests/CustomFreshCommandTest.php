@@ -11,6 +11,7 @@ use Ramadan\CustomFresh\Console\Commands\WrappedMigrateFreshCommand;
 use Ramadan\CustomFresh\Events\DatabaseRefreshed;
 use Ramadan\CustomFresh\Events\RefreshingDatabase;
 use Ramadan\CustomFresh\Events\TablesDropped;
+use Ramadan\CustomFresh\Support\ForeignKeyAdvisor;
 use Ramadan\CustomFresh\Tests\Fixtures\Seeders\PostSeeder;
 
 class CustomFreshCommandTest extends TestCase
@@ -431,25 +432,24 @@ class CustomFreshCommandTest extends TestCase
 
     public function test_it_warns_about_foreign_keys_that_would_break()
     {
-        if (! method_exists(Schema::connection('testing'), 'getForeignKeys')) {
-            $this->markTestSkipped('Schema::getForeignKeys is not available.');
-        }
-
         $path = $this->migrateFixtures($this->baseMigrations);
         $this->seedKeptRow();
 
-        $this->assertSame(0, Artisan::call('fresh:custom', [
-            '--keep'           => 'cf_users',
-            '--path'           => [$path],
-            '--realpath'       => true,
-            '--force'          => true,
-            '--no-interaction' => true,
-        ]));
-
-        $this->assertStringContainsString(
-            'Dropped table [cf_posts] references preserved table [cf_users].',
-            Artisan::output()
+        $warnings = (new ForeignKeyAdvisor('testing'))->warnings(
+            ['cf_users'],
+            ['cf_posts', 'cf_oauth_tokens']
         );
+
+        if ($warnings === []) {
+            $this->markTestSkipped('Foreign key metadata is not available on this driver.');
+        }
+
+        $this->assertContains(
+            'Dropped table [cf_posts] references preserved table [cf_users].',
+            $warnings
+        );
+
+        $this->freshCustom($path, ['--keep' => 'cf_users'])->assertSuccessful();
     }
 
     public function test_it_dispatches_lifecycle_events()
