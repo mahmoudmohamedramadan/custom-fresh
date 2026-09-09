@@ -1,6 +1,12 @@
 # Release Notes for 2.x
 
-## [Unreleased](https://github.com/mahmoudmohamedramadan/custom-fresh/compare/v2.1.0-alpha.1...2.x)
+## [Unreleased](https://github.com/mahmoudmohamedramadan/custom-fresh/compare/v2.1.0...2.x)
+
+## [v2.1.0](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v2.1.0)
+
+- [2.x] Expands PHPUnit coverage for the positional keep argument, `always_keep`, `patterns`, `keep_without_migrations`, `--drop` vs `--keep`, `--explain` / `--list` JSON, foreign-key warnings, lifecycle events, `--graceful`, `--seed` / `--seed-fresh` warnings, `--drop-views` / `--drop-types`, `--database`, `confirm_in`, config publishing, and the `migrate:fresh` wrapper.
+- [2.x] Adds `ConfigResolver` unit tests and nested-directory / `Schema::connection()` coverage for `MigrationFileScanner`.
+- [2.x] Constructs `WrappedMigrateFreshCommand` with Laravel's `migrator` singleton so `migrate:fresh` no longer fails to resolve `MigrationRepositoryInterface`.
 
 ## [v2.1.0-alpha.1](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v2.1.0-alpha.1)
 
