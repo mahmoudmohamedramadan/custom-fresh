@@ -33,7 +33,6 @@ Custom Fresh offers fine-grained control over migrations within your Laravel pro
   - [Replace migrate:fresh](#replace-migratefresh)
   - [Configuration](#configuration)
   - [Events](#events)
-  - [Example](#example)
 - [Credits](#credits)
 - [Support me](#support-me)
 
@@ -262,10 +261,6 @@ Three events are dispatched during a run, perfect for backups, audit logs, or Sl
 - `Ramadan\CustomFresh\Events\RefreshingDatabase` — fired before any destructive work, with the resolved preserve list and migration rows.
 - `Ramadan\CustomFresh\Events\TablesDropped` — fired right after the drop step, with both the preserved and dropped tables.
 - `Ramadan\CustomFresh\Events\DatabaseRefreshed` — fired after the underlying `migrate` finishes successfully.
-
-### Example
-
-![Custom Fresh CLI Command Example](/art/screenshot.png)
 
 ## Credits
 
