@@ -35,7 +35,7 @@ class CustomFreshCommand extends Command
                 {--drop= : Drop only these tables (everything else is preserved)}
                 {--preset= : Named preset(s) from config/custom-fresh.php}
                 {--freeze-schema : Mark every migration for kept tables as run (skip pending alters)}
-                {--with-related : Also preserve tables linked by foreign keys}
+                {--drop-referenced : Do not auto-preserve child tables that reference kept tables}
                 {--explain : Show what would happen without dropping or migrating anything}
                 {--list : List discovered tables and the migration files that touch them}
                 {--json : Output --explain / --list as JSON}
@@ -115,6 +115,13 @@ class CustomFreshCommand extends Command
      * @var \Ramadan\CustomFresh\Support\RefreshPlan|null
      */
     protected ?RefreshPlan $plan = null;
+
+    /**
+     * Advisor used to inspect and drop blocking foreign keys.
+     *
+     * @var \Ramadan\CustomFresh\Support\ForeignKeyAdvisor|null
+     */
+    protected ?ForeignKeyAdvisor $foreignKeys = null;
 
     /**
      * Execute the console command.
@@ -234,6 +241,8 @@ class CustomFreshCommand extends Command
 
         $this->scanner = new MigrationFileScanner;
 
+        $this->foreignKeys = new ForeignKeyAdvisor($this->getConnectionName());
+
         $this->migrationsByTable = $this->scanner->indexByTable(
             $this->scanner->collect($this->getMigrationPaths())
         );
@@ -254,7 +263,7 @@ class CustomFreshCommand extends Command
         return new RefreshPlanBuilder(
             $this->scanner,
             $this->configResolver,
-            new ForeignKeyAdvisor($this->getConnectionName()),
+            $this->foreignKeys ??= new ForeignKeyAdvisor($this->getConnectionName()),
             $this->tables,
             $this->migrationsByTable,
             $this->appliedMigrationNames()
@@ -278,7 +287,7 @@ class CustomFreshCommand extends Command
             'drop'            => ListUtil::split((string) ($this->option('drop') ?? '')),
             'presets'         => ListUtil::split((string) ($this->option('preset') ?? '')),
             'freezeSchema'    => (bool) $this->option('freeze-schema'),
-            'withRelated'     => (bool) $this->option('with-related'),
+            'dropReferenced'  => (bool) $this->option('drop-referenced'),
             'interactive'     => $this->input->isInteractive(),
             'pickTables'      => fn(array $candidates) => $this->promptTablesToKeep($candidates),
             'pickReplacement' => fn(string $invalid, array $candidates) => $this->choice(
@@ -328,24 +337,20 @@ class CustomFreshCommand extends Command
     {
         $connection = $this->getConnectionName();
 
-        Schema::connection($connection)->disableForeignKeyConstraints();
+        DB::connection($connection)->table('migrations')->delete();
 
-        try {
-            DB::connection($connection)->table('migrations')->delete();
-
-            if (! empty($migrations)) {
-                $records = array_map(static function ($migration) {
-                    return [
-                        'migration' => pathinfo($migration, PATHINFO_FILENAME),
-                        'batch'     => 1,
-                    ];
-                }, $migrations);
-
-                DB::connection($connection)->table('migrations')->insert($records);
-            }
-        } finally {
-            Schema::connection($connection)->enableForeignKeyConstraints();
+        if (empty($migrations)) {
+            return;
         }
+
+        $records = array_map(static function ($migration) {
+            return [
+                'migration' => pathinfo($migration, PATHINFO_FILENAME),
+                'batch'     => 1,
+            ];
+        }, $migrations);
+
+        DB::connection($connection)->table('migrations')->insert($records);
     }
 
     /**
@@ -357,20 +362,49 @@ class CustomFreshCommand extends Command
     protected function dropUnmanagedTables(array $keep)
     {
         $connection = $this->getConnectionName();
+        $schema     = Schema::connection($connection);
+        $advisor    = $this->foreignKeys ??= new ForeignKeyAdvisor($connection);
 
         $toDrop = $this->plan?->dropped ?? array_values(array_diff(
             $this->tables,
             array_merge($keep, ['migrations'])
         ));
 
-        Schema::connection($connection)->disableForeignKeyConstraints();
+        if ($toDrop === []) {
+            return;
+        }
+
+        $protected = [];
+
+        foreach ($advisor->blockingConstraints($keep, $toDrop) as $fk) {
+            $protected[] = $fk['to'];
+        }
+
+        $toDrop = array_values(array_diff($toDrop, $protected));
+
+        if ($toDrop === []) {
+            return;
+        }
+
+        $ordered = $advisor->sortDropOrder($toDrop);
+
+        // Drop children before parents so foreign keys stay in place.
+        // Checks are paused only when the driver cannot report foreign
+        // keys (so a safe drop order cannot be computed).
+        $bypass = ! method_exists($schema, 'getForeignKeys');
+
+        if ($bypass) {
+            $schema->disableForeignKeyConstraints();
+        }
 
         try {
-            foreach ($toDrop as $table) {
-                Schema::connection($connection)->dropIfExists($table);
+            foreach ($ordered as $table) {
+                $schema->dropIfExists($table);
             }
         } finally {
-            Schema::connection($connection)->enableForeignKeyConstraints();
+            if ($bypass) {
+                $schema->enableForeignKeyConstraints();
+            }
         }
     }
 
@@ -489,8 +523,6 @@ class CustomFreshCommand extends Command
             $this->components->info('These migrations still touch kept tables and will run:');
             $this->components->bulletList($plan->pendingAlters);
         }
-
-        $this->renderMessages($plan);
 
         return self::SUCCESS;
     }

@@ -145,8 +145,26 @@ class RefreshPlanBuilder
             );
         }
 
-        if (! empty($input['withRelated']) && ! empty($preserved)) {
-            $related   = $this->foreignKeys->expandRelated($preserved, $this->tables);
+        $expandSiblings = function () use (&$preserved, &$notes) {
+            if (empty($preserved)) {
+                return;
+            }
+
+            $siblings  = $this->expandCreateSiblings($preserved);
+            $preserved = $siblings['preserved'];
+            $notes     = array_merge($notes, $siblings['notes']);
+        };
+
+        $applyRelated = function (string $method) use ($dropOnly, $keepRaw, &$preserved, &$notes, &$warnings) {
+            if (empty($preserved)) {
+                return;
+            }
+
+            if ($dropOnly && $method === 'expandRelated') {
+                return;
+            }
+
+            $related   = $this->foreignKeys->{$method}($preserved, $this->tables, ['migrations']);
             $preserved = $related['preserved'];
             $notes     = array_merge($notes, $related['notes']);
 
@@ -160,13 +178,16 @@ class RefreshPlanBuilder
                 $warnings
             );
             $preserved = $resolved['tables'];
-        }
+        };
 
-        if (! empty($preserved)) {
-            $siblings  = $this->expandCreateSiblings($preserved);
-            $preserved = $siblings['preserved'];
-            $notes     = array_merge($notes, $siblings['notes']);
-        }
+        $expandSiblings();
+
+        // Parents of kept children are always kept so foreign keys stay
+        // intact. --drop-referenced only skips keeping dependents.
+        $applyRelated(! empty($input['dropReferenced']) ? 'expandReferenced' : 'expandRelated');
+
+        $expandSiblings();
+        $applyRelated('expandReferenced');
 
         $dropped = array_values(array_diff($this->tables, $preserved, ['migrations']));
 
