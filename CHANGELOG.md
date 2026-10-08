@@ -1,8 +1,8 @@
 # Release Notes for 2.x
 
-## [Unreleased](https://github.com/mahmoudmohamedramadan/custom-fresh/compare/v2.1.1...2.x)
+## [Unreleased](https://github.com/mahmoudmohamedramadan/custom-fresh/compare/v2.2.0...2.x)
 
-## [v2.1.1](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v2.1.1)
+## [v2.2.0](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v2.2.0)
 
 - [2.x] Changes `dropUnmanagedTables` so it no longer wraps every drop in `disableForeignKeyConstraints()` / `enableForeignKeyConstraints()`, and it never drops foreign keys. Tables are dropped child-first. A parent that a kept child still references is never dropped (on any driver). `--drop-referenced` only skips keeping dependents: `fresh:custom users --drop-referenced` drops `posts`, then `migrate` recreates it empty with its foreign key. Keeping `posts` still preserves `users`.
 - [2.x] Auto-preserves related foreign-key tables: keeping `posts` also keeps `users`, and keeping `users` also keeps `posts`. `--except` and `--drop` cannot break that pair. `--drop-referenced` skips auto-preserving children only, not referenced parents.
