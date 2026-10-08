@@ -142,13 +142,22 @@ php artisan fresh:custom users --freeze-schema
 
 ### Related tables
 
-Pass `--with-related` to also preserve tables linked by foreign keys:
+Keeping a child table also preserves the parent tables it references, and keeping a parent also preserves its children:
 
 ```SHELL
-php artisan fresh:custom --keep=posts --with-related
+php artisan fresh:custom posts
+php artisan fresh:custom users
 ```
 
-The command warns you when a kept table references a table that would be dropped (or the other way around).
+`posts` keeps `users`, and `users` keeps `posts`. The command tells you which related tables were added.
+
+Pass `--drop-referenced` to refresh **child** tables of a kept parent. Parent tables that a kept child still references are never dropped, on any driver, so foreign keys stay intact:
+
+```SHELL
+php artisan fresh:custom users --drop-referenced
+```
+
+That keeps `users` and drops `posts` (then migrate recreates `posts` with its foreign key). `php artisan fresh:custom posts --drop-referenced` still keeps `users`, because dropping the parent would strip the constraint from `posts`.
 
 ### Multiple connections
 

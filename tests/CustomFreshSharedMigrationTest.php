@@ -52,6 +52,6 @@ class CustomFreshSharedMigrationTest extends TestCase
 
         $this->assertDatabaseHas('cf_users', ['email' => 'kept@example.com']);
         $this->assertDatabaseHas('cf_sessions', ['id' => 'session-1']);
-        $this->assertSame(0, DB::table('cf_posts')->count());
+        $this->assertSame('original-post', DB::table('cf_posts')->value('title'));
     }
 }

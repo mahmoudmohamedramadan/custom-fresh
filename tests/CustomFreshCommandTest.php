@@ -24,7 +24,7 @@ class CustomFreshCommandTest extends TestCase
 
         $this->assertTrue(Schema::hasTable('cf_users'));
         $this->assertSame('kept@example.com', DB::table('cf_users')->value('email'));
-        $this->assertSame(0, DB::table('cf_posts')->count());
+        $this->assertSame('original-post', DB::table('cf_posts')->value('title'));
         $this->assertSame(0, DB::table('cf_oauth_tokens')->count());
     }
 
@@ -59,7 +59,7 @@ class CustomFreshCommandTest extends TestCase
 
     public function test_except_drops_a_table_from_always_keep()
     {
-        config()->set('custom-fresh.always_keep', ['cf_users', 'cf_posts']);
+        config()->set('custom-fresh.always_keep', ['cf_users', 'cf_oauth_tokens']);
 
         $path = $this->migrateFixtures($this->baseMigrations);
         $this->seedKeptRow();
@@ -67,7 +67,25 @@ class CustomFreshCommandTest extends TestCase
         $this->freshCustom($path, ['--except' => 'cf_users'])->assertSuccessful();
 
         $this->assertSame(0, DB::table('cf_users')->count());
-        $this->assertTrue(Schema::hasTable('cf_posts'));
+        $this->assertTrue(Schema::hasTable('cf_oauth_tokens'));
+        $this->assertSame('abc123', DB::table('cf_oauth_tokens')->value('token'));
+        $this->assertSame(0, DB::table('cf_posts')->count());
+    }
+
+    public function test_except_does_not_drop_a_referenced_parent_of_a_kept_child()
+    {
+        if (! method_exists(Schema::connection('testing'), 'getForeignKeys')) {
+            $this->markTestSkipped('Schema::getForeignKeys is not available.');
+        }
+
+        config()->set('custom-fresh.always_keep', ['cf_posts']);
+
+        $path = $this->migrateFixtures($this->baseMigrations);
+        $this->seedKeptRow();
+
+        $this->freshCustom($path, ['--except' => 'cf_users'])->assertSuccessful();
+
+        $this->assertSame('kept@example.com', DB::table('cf_users')->value('email'));
         $this->assertSame('original-post', DB::table('cf_posts')->value('title'));
     }
 
@@ -93,7 +111,7 @@ class CustomFreshCommandTest extends TestCase
 
         $this->assertTrue(Schema::hasTable('cf_sessions'));
         $this->assertSame('kept', DB::table('cf_sessions')->value('payload'));
-        $this->assertSame(0, DB::table('cf_posts')->count());
+        $this->assertSame('original-post', DB::table('cf_posts')->value('title'));
     }
 
     public function test_drop_mode_only_removes_listed_tables()
@@ -108,6 +126,21 @@ class CustomFreshCommandTest extends TestCase
         $this->assertSame('kept@example.com', DB::table('cf_users')->value('email'));
         $this->assertSame('abc123', DB::table('cf_oauth_tokens')->value('token'));
         $this->assertSame(0, DB::table('cf_posts')->count());
+    }
+
+    public function test_drop_mode_does_not_drop_a_parent_of_a_kept_child()
+    {
+        if (! method_exists(Schema::connection('testing'), 'getForeignKeys')) {
+            $this->markTestSkipped('Schema::getForeignKeys is not available.');
+        }
+
+        $path = $this->migrateFixtures($this->baseMigrations);
+        $this->seedKeptRow();
+
+        $this->freshCustom($path, ['--drop' => 'cf_users'])->assertSuccessful();
+
+        $this->assertSame('kept@example.com', DB::table('cf_users')->value('email'));
+        $this->assertSame('original-post', DB::table('cf_posts')->value('title'));
     }
 
     public function test_glob_patterns_preserve_matching_tables()
@@ -136,7 +169,7 @@ class CustomFreshCommandTest extends TestCase
 
         $this->assertTrue(Schema::hasTable('cf_users'));
         $this->assertTrue(Schema::hasTable('cf_oauth_tokens'));
-        $this->assertSame(0, DB::table('cf_posts')->count());
+        $this->assertSame('original-post', DB::table('cf_posts')->value('title'));
     }
 
     public function test_unknown_preset_fails()
@@ -176,8 +209,9 @@ class CustomFreshCommandTest extends TestCase
         $this->seedKeptRow();
 
         $this->freshCustom($path, [
-            '--keep' => 'cf_users',
-            '--seed-fresh' => true,
+            '--keep'            => 'cf_users',
+            '--drop-referenced' => true,
+            '--seed-fresh'      => true,
         ])->assertSuccessful();
 
         $this->assertSame('kept@example.com', DB::table('cf_users')->value('email'));
@@ -214,7 +248,7 @@ class CustomFreshCommandTest extends TestCase
         $this->assertTrue(Schema::hasTable('cf_cache_entries'));
         $this->assertSame('kept-cache', DB::table('cf_cache')->value('value'));
         $this->assertSame('owner-1', DB::table('cf_cache_locks')->value('owner'));
-        $this->assertSame(0, DB::table('cf_cache_entries')->count());
+        $this->assertSame('remembered', DB::table('cf_cache_entries')->value('cache_key'));
         $this->assertSame(0, DB::table('cf_posts')->count());
     }
 
@@ -242,7 +276,60 @@ class CustomFreshCommandTest extends TestCase
         $this->assertSame('kept@example.com', DB::table('cf_users')->value('email'));
     }
 
-    public function test_with_related_also_preserves_foreign_key_parents()
+    public function test_keeping_a_child_also_preserves_referenced_parents()
+    {
+        if (! method_exists(Schema::connection('testing'), 'getForeignKeys')) {
+            $this->markTestSkipped('Schema::getForeignKeys is not available.');
+        }
+
+        $path = $this->migrateFixtures($this->baseMigrations);
+        $this->seedKeptRow();
+
+        $this->freshCustom($path, ['--keep' => 'cf_posts'])
+            ->expectsOutputToContain('cf_users')
+            ->doesntExpectOutputToContain('--drop-referenced')
+            ->assertSuccessful();
+
+        $this->assertTrue(Schema::hasTable('cf_posts'));
+        $this->assertTrue(Schema::hasTable('cf_users'));
+        $this->assertSame('kept@example.com', DB::table('cf_users')->value('email'));
+        $this->assertSame('original-post', DB::table('cf_posts')->value('title'));
+    }
+
+    public function test_positional_child_table_also_preserves_referenced_parents()
+    {
+        if (! method_exists(Schema::connection('testing'), 'getForeignKeys')) {
+            $this->markTestSkipped('Schema::getForeignKeys is not available.');
+        }
+
+        $path = $this->migrateFixtures($this->baseMigrations);
+        $this->seedKeptRow();
+
+        $this->freshCustom($path, ['tables' => 'cf_posts'])->assertSuccessful();
+
+        $this->assertSame('kept@example.com', DB::table('cf_users')->value('email'));
+        $this->assertSame('original-post', DB::table('cf_posts')->value('title'));
+    }
+
+    public function test_keeping_a_parent_also_preserves_child_tables()
+    {
+        if (! method_exists(Schema::connection('testing'), 'getForeignKeys')) {
+            $this->markTestSkipped('Schema::getForeignKeys is not available.');
+        }
+
+        $path = $this->migrateFixtures($this->baseMigrations);
+        $this->seedKeptRow();
+
+        $this->freshCustom($path, ['--keep' => 'cf_users'])
+            ->expectsOutputToContain('cf_posts')
+            ->assertSuccessful();
+
+        $this->assertSame('kept@example.com', DB::table('cf_users')->value('email'));
+        $this->assertSame('original-post', DB::table('cf_posts')->value('title'));
+        $this->assertSame(0, DB::table('cf_oauth_tokens')->count());
+    }
+
+    public function test_drop_referenced_does_not_drop_a_parent_of_a_kept_child()
     {
         if (! method_exists(Schema::connection('testing'), 'getForeignKeys')) {
             $this->markTestSkipped('Schema::getForeignKeys is not available.');
@@ -252,14 +339,62 @@ class CustomFreshCommandTest extends TestCase
         $this->seedKeptRow();
 
         $this->freshCustom($path, [
-            '--keep'         => 'cf_posts',
-            '--with-related' => true,
+            '--keep'            => 'cf_posts',
+            '--drop-referenced' => true,
         ])->assertSuccessful();
 
         $this->assertTrue(Schema::hasTable('cf_posts'));
         $this->assertTrue(Schema::hasTable('cf_users'));
-        $this->assertSame('kept@example.com', DB::table('cf_users')->value('email'));
         $this->assertSame('original-post', DB::table('cf_posts')->value('title'));
+        $this->assertSame('kept@example.com', DB::table('cf_users')->value('email'));
+    }
+
+    public function test_drop_referenced_drops_children_of_a_kept_parent()
+    {
+        $path = $this->migrateFixtures($this->baseMigrations);
+        $this->seedKeptRow();
+
+        $this->freshCustom($path, [
+            '--keep'            => 'cf_users',
+            '--drop-referenced' => true,
+        ])->assertSuccessful();
+
+        $this->assertSame('kept@example.com', DB::table('cf_users')->value('email'));
+        $this->assertSame(0, DB::table('cf_posts')->count());
+    }
+
+    public function test_always_keep_child_also_preserves_referenced_parents()
+    {
+        if (! method_exists(Schema::connection('testing'), 'getForeignKeys')) {
+            $this->markTestSkipped('Schema::getForeignKeys is not available.');
+        }
+
+        config()->set('custom-fresh.always_keep', ['cf_posts']);
+
+        $path = $this->migrateFixtures($this->baseMigrations);
+        $this->seedKeptRow();
+
+        $this->freshCustom($path)->assertSuccessful();
+
+        $this->assertSame('original-post', DB::table('cf_posts')->value('title'));
+        $this->assertSame('kept@example.com', DB::table('cf_users')->value('email'));
+    }
+
+    public function test_always_keep_child_with_drop_referenced_still_keeps_the_parent()
+    {
+        if (! method_exists(Schema::connection('testing'), 'getForeignKeys')) {
+            $this->markTestSkipped('Schema::getForeignKeys is not available.');
+        }
+
+        config()->set('custom-fresh.always_keep', ['cf_posts']);
+
+        $path = $this->migrateFixtures($this->baseMigrations);
+        $this->seedKeptRow();
+
+        $this->freshCustom($path, ['--drop-referenced' => true])->assertSuccessful();
+
+        $this->assertSame('original-post', DB::table('cf_posts')->value('title'));
+        $this->assertSame('kept@example.com', DB::table('cf_users')->value('email'));
     }
 
     public function test_connection_overrides_merge_always_keep()
@@ -274,7 +409,7 @@ class CustomFreshCommandTest extends TestCase
 
         $this->assertSame('kept@example.com', DB::table('cf_users')->value('email'));
         $this->assertSame('abc123', DB::table('cf_oauth_tokens')->value('token'));
-        $this->assertSame(0, DB::table('cf_posts')->count());
+        $this->assertSame('original-post', DB::table('cf_posts')->value('title'));
     }
 
     public function test_positional_argument_preserves_tables()
@@ -285,7 +420,7 @@ class CustomFreshCommandTest extends TestCase
         $this->freshCustom($path, ['tables' => 'cf_users'])->assertSuccessful();
 
         $this->assertSame('kept@example.com', DB::table('cf_users')->value('email'));
-        $this->assertSame(0, DB::table('cf_posts')->count());
+        $this->assertSame('original-post', DB::table('cf_posts')->value('title'));
     }
 
     public function test_positional_argument_combines_with_keep_option()
@@ -300,7 +435,7 @@ class CustomFreshCommandTest extends TestCase
 
         $this->assertSame('kept@example.com', DB::table('cf_users')->value('email'));
         $this->assertSame('abc123', DB::table('cf_oauth_tokens')->value('token'));
-        $this->assertSame(0, DB::table('cf_posts')->count());
+        $this->assertSame('original-post', DB::table('cf_posts')->value('title'));
     }
 
     public function test_always_keep_preserves_tables_without_cli_flags()
@@ -313,7 +448,7 @@ class CustomFreshCommandTest extends TestCase
         $this->freshCustom($path)->assertSuccessful();
 
         $this->assertSame('kept@example.com', DB::table('cf_users')->value('email'));
-        $this->assertSame(0, DB::table('cf_posts')->count());
+        $this->assertSame('original-post', DB::table('cf_posts')->value('title'));
     }
 
     public function test_config_patterns_preserve_matching_tables()
@@ -351,7 +486,7 @@ class CustomFreshCommandTest extends TestCase
 
         $this->assertTrue(Schema::hasTable('cf_sessions'));
         $this->assertSame('kept', DB::table('cf_sessions')->value('payload'));
-        $this->assertSame(0, DB::table('cf_posts')->count());
+        $this->assertSame('original-post', DB::table('cf_posts')->value('title'));
     }
 
     public function test_drop_wins_over_keep()
@@ -360,12 +495,49 @@ class CustomFreshCommandTest extends TestCase
         $this->seedKeptRow();
 
         $this->freshCustom($path, [
-            '--keep' => 'cf_users,cf_posts',
+            '--keep' => 'cf_users,cf_oauth_tokens',
+            '--drop' => 'cf_oauth_tokens',
+        ])->assertSuccessful();
+
+        $this->assertSame('kept@example.com', DB::table('cf_users')->value('email'));
+        $this->assertSame(0, DB::table('cf_oauth_tokens')->count());
+        $this->assertSame('original-post', DB::table('cf_posts')->value('title'));
+    }
+
+    public function test_drop_does_not_remove_a_referenced_parent_of_a_kept_child()
+    {
+        if (! method_exists(Schema::connection('testing'), 'getForeignKeys')) {
+            $this->markTestSkipped('Schema::getForeignKeys is not available.');
+        }
+
+        $path = $this->migrateFixtures($this->baseMigrations);
+        $this->seedKeptRow();
+
+        $this->freshCustom($path, [
+            '--keep' => 'cf_posts',
+            '--drop' => 'cf_users',
+        ])->assertSuccessful();
+
+        $this->assertSame('kept@example.com', DB::table('cf_users')->value('email'));
+        $this->assertSame('original-post', DB::table('cf_posts')->value('title'));
+    }
+
+    public function test_drop_does_not_remove_a_child_of_a_kept_parent()
+    {
+        if (! method_exists(Schema::connection('testing'), 'getForeignKeys')) {
+            $this->markTestSkipped('Schema::getForeignKeys is not available.');
+        }
+
+        $path = $this->migrateFixtures($this->baseMigrations);
+        $this->seedKeptRow();
+
+        $this->freshCustom($path, [
+            '--keep' => 'cf_users',
             '--drop' => 'cf_posts',
         ])->assertSuccessful();
 
         $this->assertSame('kept@example.com', DB::table('cf_users')->value('email'));
-        $this->assertSame(0, DB::table('cf_posts')->count());
+        $this->assertSame('original-post', DB::table('cf_posts')->value('title'));
     }
 
     public function test_explain_prints_the_resolved_plan()
@@ -379,7 +551,7 @@ class CustomFreshCommandTest extends TestCase
         ])
             ->expectsOutputToContain('testing')
             ->expectsOutputToContain('cf_users')
-            ->expectsOutputToContain('cf_posts')
+            ->doesntExpectOutputToContain('Also preserving')
             ->assertSuccessful();
 
         $this->assertSame('kept@example.com', DB::table('cf_users')->value('email'));
@@ -459,7 +631,7 @@ class CustomFreshCommandTest extends TestCase
 
         Event::assertDispatched(TablesDropped::class, function ($event) {
             return in_array('cf_users', $event->preserved, true)
-                && in_array('cf_posts', $event->dropped, true);
+                && in_array('cf_oauth_tokens', $event->dropped, true);
         });
 
         Event::assertDispatched(DatabaseRefreshed::class, function ($event) {
@@ -575,7 +747,7 @@ class CustomFreshCommandTest extends TestCase
         ])->assertSuccessful();
 
         $this->assertSame('tenant@example.com', DB::connection('tenant')->table('cf_users')->value('email'));
-        $this->assertSame(0, DB::connection('tenant')->table('cf_posts')->count());
+        $this->assertSame(0, DB::connection('tenant')->table('cf_oauth_tokens')->count());
     }
 
     public function test_it_skips_tables_without_migrations_unless_keep_raw()
@@ -686,7 +858,7 @@ class CustomFreshCommandTest extends TestCase
 
         $this->assertTrue(Schema::hasTable('cf_users'));
         $this->assertSame('kept@example.com', DB::table('cf_users')->value('email'));
-        $this->assertSame(0, DB::table('cf_posts')->count());
+        $this->assertSame('original-post', DB::table('cf_posts')->value('title'));
     }
 
     public function test_migrate_fresh_wrapper_skips_delegation_when_keep_lists_are_empty()
