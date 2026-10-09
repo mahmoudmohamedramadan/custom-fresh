@@ -14,6 +14,7 @@ class RefreshPlan
      * @param  array<int, string>  $warnings
      * @param  array<int, string>  $notes
      * @param  bool  $dropOnly
+     * @param  bool  $cancelled
      * @return void
      */
     public function __construct(
@@ -24,6 +25,7 @@ class RefreshPlan
         public array $warnings = [],
         public array $notes = [],
         public bool $dropOnly = false,
+        public bool $cancelled = false,
     ) {
     }
 

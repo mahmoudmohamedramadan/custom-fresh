@@ -169,6 +169,10 @@ class CustomFreshCommand extends Command
         // keys are not left pointing at a dropped sibling.
         $this->plan = $this->makePlanBuilder()->build($this->planInput());
 
+        if ($this->plan->cancelled) {
+            return self::SUCCESS;
+        }
+
         if ($this->plan->isEmpty()) {
             if ($this->plan->warnings !== []) {
                 foreach ($this->plan->warnings as $warning) {
@@ -295,7 +299,32 @@ class CustomFreshCommand extends Command
                 "Choose the correct table instead ({$invalid})",
                 $candidates
             ),
+            'confirmDropRelated' => function (string $table, array $shared, array $related) {
+                if ($this->option('explain') || ! $this->input->isInteractive()) {
+                    return null;
+                }
+
+                $this->line(
+                    "Dropping [{$table}] may affect related tables: {$this->formatTables($related)}."
+                );
+
+                return $this->confirm('Drop all these tables?');
+            },
         ];
+    }
+
+    /**
+     * Format table names as [users], [posts].
+     *
+     * @param  array<int, string>  $tables
+     * @return string
+     */
+    protected function formatTables(array $tables)
+    {
+        return implode(', ', array_map(
+            static fn(string $table) => "[{$table}]",
+            $tables
+        ));
     }
 
     /**

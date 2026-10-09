@@ -241,7 +241,11 @@ class CustomFreshCommandTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        $this->freshCustom($path, ['--keep' => 'cf_cache_locks'])->assertSuccessful();
+        $this->freshCustom($path, ['--keep' => 'cf_cache_locks'])
+            ->expectsOutputToContain(
+                'Also preserving [cf_cache] because it shares a create migration with [cf_cache_locks].'
+            )
+            ->assertSuccessful();
 
         $this->assertTrue(Schema::hasTable('cf_cache'));
         $this->assertTrue(Schema::hasTable('cf_cache_locks'));
@@ -268,12 +272,132 @@ class CustomFreshCommandTest extends TestCase
             'owner' => 'owner-1',
         ]);
 
-        $this->freshCustom($path, ['--drop' => 'cf_cache'])->assertSuccessful();
+        $this->freshCustom($path, ['--drop' => 'cf_cache'])
+            ->expectsOutputToContain(
+                'Cannot drop [cf_cache]; it shares a create migration with [cf_cache_locks].'
+            )
+            ->assertSuccessful();
 
         $this->assertTrue(Schema::hasTable('cf_cache'));
         $this->assertSame('kept-cache', DB::table('cf_cache')->value('value'));
         $this->assertSame('owner-1', DB::table('cf_cache_locks')->value('owner'));
         $this->assertSame('kept@example.com', DB::table('cf_users')->value('email'));
+    }
+
+    public function test_confirming_a_shared_migration_drop_drops_all_siblings()
+    {
+        $path = $this->migrateFixtures(array_merge($this->baseMigrations, [
+            '0001_01_01_000003_create_cf_cache_tables.php',
+        ]));
+        $this->seedKeptRow();
+
+        DB::table('cf_cache')->insert([
+            'key'   => 'remembered',
+            'value' => 'kept-cache',
+        ]);
+        DB::table('cf_cache_locks')->insert([
+            'key'   => 'lock-1',
+            'owner' => 'owner-1',
+        ]);
+
+        $this->artisan('fresh:custom', [
+            '--drop'     => 'cf_cache',
+            '--path'     => [$path],
+            '--realpath' => true,
+            '--force'    => true,
+        ])
+            ->expectsOutputToContain(
+                'Dropping [cf_cache] may affect related tables: [cf_cache_locks].'
+            )
+            ->expectsConfirmation('Drop all these tables?', 'yes')
+            ->assertSuccessful();
+
+        $this->assertSame(0, DB::table('cf_cache')->count());
+        $this->assertSame(0, DB::table('cf_cache_locks')->count());
+        $this->assertSame('kept@example.com', DB::table('cf_users')->value('email'));
+    }
+
+    public function test_declining_a_shared_migration_drop_keeps_the_siblings()
+    {
+        $path = $this->migrateFixtures(array_merge($this->baseMigrations, [
+            '0001_01_01_000003_create_cf_cache_tables.php',
+        ]));
+        $this->seedKeptRow();
+
+        DB::table('cf_cache')->insert([
+            'key'   => 'remembered',
+            'value' => 'kept-cache',
+        ]);
+        DB::table('cf_cache_locks')->insert([
+            'key'   => 'lock-1',
+            'owner' => 'owner-1',
+        ]);
+
+        $this->artisan('fresh:custom', [
+            '--drop'     => 'cf_cache',
+            '--path'     => [$path],
+            '--realpath' => true,
+            '--force'    => true,
+        ])
+            ->expectsOutputToContain(
+                'Dropping [cf_cache] may affect related tables: [cf_cache_locks].'
+            )
+            ->expectsConfirmation('Drop all these tables?', 'no')
+            ->doesntExpectOutputToContain('Cannot drop')
+            ->doesntExpectOutputToContain('Dropping the tables')
+            ->doesntExpectOutputToContain('Nothing to migrate')
+            ->assertSuccessful();
+
+        $this->assertSame('kept-cache', DB::table('cf_cache')->value('value'));
+        $this->assertSame('owner-1', DB::table('cf_cache_locks')->value('owner'));
+    }
+
+    public function test_confirming_a_shared_migration_drop_also_drops_dependents()
+    {
+        if (! method_exists(Schema::connection('testing'), 'getForeignKeys')) {
+            $this->markTestSkipped('Schema::getForeignKeys is not available.');
+        }
+
+        $path = $this->migrateFixtures([
+            '0001_01_01_000005_create_cf_auth_tables.php',
+            '0001_01_01_000001_create_cf_posts_table.php',
+        ]);
+
+        $userId = DB::table('cf_users')->insertGetId([
+            'email'      => 'kept@example.com',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('cf_posts')->insert([
+            'user_id'    => $userId,
+            'title'      => 'original-post',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('cf_sessions')->insert([
+            'id'            => 'session-1',
+            'user_id'       => $userId,
+            'ip_address'    => '127.0.0.1',
+            'user_agent'    => 'test',
+            'payload'       => 'kept',
+            'last_activity' => time(),
+        ]);
+
+        $this->artisan('fresh:custom', [
+            '--drop'     => 'cf_users',
+            '--path'     => [$path],
+            '--realpath' => true,
+            '--force'    => true,
+        ])
+            ->expectsOutputToContain(
+                'Dropping [cf_users] may affect related tables: [cf_password_reset_tokens], [cf_posts], [cf_sessions].'
+            )
+            ->expectsConfirmation('Drop all these tables?', 'yes')
+            ->assertSuccessful();
+
+        $this->assertSame(0, DB::table('cf_users')->count());
+        $this->assertSame(0, DB::table('cf_sessions')->count());
+        $this->assertSame(0, DB::table('cf_posts')->count());
     }
 
     public function test_keeping_a_child_also_preserves_referenced_parents()

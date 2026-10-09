@@ -4,9 +4,10 @@
 
 ## [v2.2.1](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v2.2.1)
 
-- [2.x] Warns that a referenced parent cannot be dropped only when `--drop-referenced` is passed: `Preserved table [posts] references [users], which cannot be dropped.` Without the flag, keeping a child still notes `Also preserving [users] because [posts] references it.`
-- [2.x] Notes (INFO) when a dropped child still references a kept parent: `Dropped table [posts] references preserved table [users].` A kept child that references a dropped parent remains a warning.
-- [2.x] Errors with `Table [usersss] does not exist.` when a kept table is missing, and `No tables to preserve were specified.` when nothing is resolved.
+- [2.x] Warns that a referenced parent cannot be dropped only with `--drop-referenced`.
+- [2.x] Notes when a dropped child still references a kept parent.
+- [2.x] Errors when a kept table does not exist, or when nothing is specified.
+- [2.x] `--drop` of a table that shares a create migration asks to drop related tables. No cancels; non-interactive keeps the group and warns.
 
 ## [v2.2.0](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v2.2.0)
 

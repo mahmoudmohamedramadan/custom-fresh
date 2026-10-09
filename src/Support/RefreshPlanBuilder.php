@@ -138,6 +138,20 @@ class RefreshPlanBuilder
         $notes     = array_merge($notes, $resolved['notes']);
         $warnings  = array_merge($warnings, $resolved['warnings']);
 
+        $expanded = $this->expandDropSharedMigrations($drop, $preserved, $explicitKeep, $input);
+
+        if ($expanded['cancelled']) {
+            return new RefreshPlan(cancelled: true);
+        }
+
+        $drop = $expanded['drop'];
+
+        if ($dropOnly) {
+            $preserved = array_values(array_diff($this->tables, $drop, $except, ['migrations']));
+        } else {
+            $preserved = array_values(array_diff($preserved, $drop));
+        }
+
         if (empty($preserved) && ! $dropOnly) {
             return new RefreshPlan(
                 warnings: array_values(array_unique($warnings)),
@@ -145,14 +159,17 @@ class RefreshPlanBuilder
             );
         }
 
-        $expandSiblings = function () use (&$preserved, &$notes) {
+        $requestedDrop = array_values(array_unique(array_merge($drop, $except)));
+
+        $expandSiblings = function () use (&$preserved, &$notes, &$warnings, $requestedDrop) {
             if (empty($preserved)) {
                 return;
             }
 
-            $siblings  = $this->expandCreateSiblings($preserved);
+            $siblings  = $this->expandCreateSiblings($preserved, $requestedDrop);
             $preserved = $siblings['preserved'];
             $notes     = array_merge($notes, $siblings['notes']);
+            $warnings  = array_merge($warnings, $siblings['warnings']);
         };
 
         $applyRelated = function (string $method) use ($dropOnly, $keepRaw, &$preserved, &$notes, &$warnings) {
@@ -334,6 +351,154 @@ class RefreshPlanBuilder
     }
 
     /**
+     * Ask to drop every table that shares a create migration with a --drop table.
+     *
+     * Children of that group are included when they were not explicitly kept,
+     * so a confirmed drop is not undone by a leftover foreign key.
+     *
+     * @param  array<int, string>  $drop
+     * @param  array<int, string>  $preserved
+     * @param  array<int, string>  $explicitKeep
+     * @param  array<string, mixed>  $input
+     * @return array{drop: array<int, string>, cancelled: bool}
+     */
+    protected function expandDropSharedMigrations(
+        array $drop,
+        array $preserved,
+        array $explicitKeep,
+        array $input
+    ) {
+        $confirm = is_callable($input['confirmDropRelated'] ?? null)
+            ? $input['confirmDropRelated']
+            : null;
+
+        if ($drop === [] || $confirm === null) {
+            return ['drop' => $drop, 'cancelled' => false];
+        }
+
+        foreach (array_values(array_unique($drop)) as $table) {
+            $group  = $this->createGroup($table);
+            $shared = array_values(array_diff($group, [$table]));
+            sort($shared);
+
+            if ($shared === []) {
+                continue;
+            }
+
+            $related = array_values(array_diff(
+                $this->relatedTablesForDrop($group, $preserved, $explicitKeep),
+                [$table]
+            ));
+            sort($related);
+
+            if ($related === []) {
+                continue;
+            }
+
+            $nextDrop = array_values(array_unique(array_merge($drop, $group, $related)));
+            $nextKeep = array_values(array_diff($preserved, $nextDrop));
+            $pulled   = $this->foreignKeys->expandReferenced(
+                $nextKeep,
+                $this->tables,
+                ['migrations']
+            );
+
+            if (in_array($table, $pulled['preserved'], true)) {
+                continue;
+            }
+
+            $accepted = $confirm($table, $shared, $related);
+
+            if ($accepted === true) {
+                $drop      = $nextDrop;
+                $preserved = $nextKeep;
+                continue;
+            }
+
+            if ($accepted === false) {
+                return ['drop' => $drop, 'cancelled' => true];
+            }
+        }
+
+        return [
+            'drop'      => array_values(array_unique($drop)),
+            'cancelled' => false,
+        ];
+    }
+
+    /**
+     * Tables created by the same Schema::create migration as the given table.
+     *
+     * @param  string  $table
+     * @return array<int, string>
+     */
+    protected function createGroup(string $table)
+    {
+        $group = [$table];
+        $known = array_flip($this->tables);
+
+        foreach ($this->migrationsByTable[$table] ?? [] as $migration) {
+            $created = $this->scanner->createdTables($migration);
+
+            if (! in_array($table, $created, true)) {
+                continue;
+            }
+
+            foreach ($created as $sibling) {
+                if (isset($known[$sibling])) {
+                    $group[] = $sibling;
+                }
+            }
+        }
+
+        return array_values(array_unique($group));
+    }
+
+    /**
+     * Sibling and dependent tables that should be dropped with a create group.
+     *
+     * @param  array<int, string>  $group
+     * @param  array<int, string>  $preserved
+     * @param  array<int, string>  $explicitKeep
+     * @return array<int, string>
+     */
+    protected function relatedTablesForDrop(array $group, array $preserved, array $explicitKeep)
+    {
+        $skip    = array_flip($explicitKeep);
+        $related = [];
+
+        foreach ($group as $table) {
+            if ($table !== 'migrations' && ! isset($skip[$table])) {
+                $related[] = $table;
+            }
+        }
+
+        $dependents = $this->foreignKeys->expandDependents(
+            $group,
+            $this->tables,
+            ['migrations']
+        );
+
+        foreach ($dependents['preserved'] as $table) {
+            if (
+                $table === 'migrations'
+                || isset($skip[$table])
+            ) {
+                continue;
+            }
+
+            if (
+                in_array($table, $preserved, true)
+                || in_array($table, $group, true)
+            ) {
+                $related[] = $table;
+            }
+        }
+
+        return array_values(array_unique($related));
+    }
+
+    /**
      * Keep every table created by the same Schema::create migration as a preserved table.
      *
      * Those create migrations are marked as already run, so dropping a sibling
@@ -341,14 +506,17 @@ class RefreshPlanBuilder
      * from Laravel's users migration and then recreating "posts").
      *
      * @param  array<int, string>  $preserved
-     * @return array{preserved: array<int, string>, notes: array<int, string>}
+     * @param  array<int, string>  $requestedDrop
+     * @return array{preserved: array<int, string>, notes: array<int, string>, warnings: array<int, string>}
      */
-    protected function expandCreateSiblings(array $preserved)
+    protected function expandCreateSiblings(array $preserved, array $requestedDrop = [])
     {
-        $keep   = array_values(array_unique($preserved));
-        $known  = array_flip($this->tables);
-        $notes  = [];
-        $safety = 0;
+        $keep     = array_values(array_unique($preserved));
+        $known    = array_flip($this->tables);
+        $blocked  = array_flip($requestedDrop);
+        $notes    = [];
+        $warnings = [];
+        $safety   = 0;
 
         do {
             $added   = 0;
@@ -363,12 +531,22 @@ class RefreshPlanBuilder
                     }
 
                     foreach ($created as $sibling) {
-                        if ($sibling === $table || in_array($sibling, $keep, true) || ! isset($known[$sibling])) {
+                        if (
+                            $sibling === $table
+                            || in_array($sibling, $keep, true)
+                            || ! isset($known[$sibling])
+                        ) {
                             continue;
                         }
 
-                        $keep[]  = $sibling;
-                        $notes[] = "Also preserving [{$sibling}] because it is created by the same migration as [{$table}].";
+                        $keep[] = $sibling;
+
+                        if (isset($blocked[$sibling])) {
+                            $warnings[] = "Cannot drop [{$sibling}]; it shares a create migration with [{$table}].";
+                        } else {
+                            $notes[] = "Also preserving [{$sibling}] because it shares a create migration with [{$table}].";
+                        }
+
                         $added++;
                     }
                 }
@@ -380,6 +558,7 @@ class RefreshPlanBuilder
         return [
             'preserved' => array_values(array_unique($keep)),
             'notes'     => array_values(array_unique($notes)),
+            'warnings'  => array_values(array_unique($warnings)),
         ];
     }
 
