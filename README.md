@@ -149,7 +149,7 @@ php artisan fresh:custom posts
 php artisan fresh:custom users
 ```
 
-`posts` keeps `users`, and `users` keeps `posts`. The command tells you which related tables were added.
+`posts` keeps `users`, and `users` keeps `posts`. The command notes which related tables were added. With `--drop-referenced`, keeping a child warns that the parent still cannot be dropped.
 
 Pass `--drop-referenced` to refresh **child** tables of a kept parent. Parent tables that a kept child still references are never dropped, on any driver, so foreign keys stay intact:
 
@@ -157,7 +157,7 @@ Pass `--drop-referenced` to refresh **child** tables of a kept parent. Parent ta
 php artisan fresh:custom users --drop-referenced
 ```
 
-That keeps `users` and drops `posts` (then migrate recreates `posts` with its foreign key). `php artisan fresh:custom posts --drop-referenced` still keeps `users`, because dropping the parent would strip the constraint from `posts`.
+That keeps `users` and drops `posts` (then migrate recreates `posts` with its foreign key). The command notes that the dropped child referenced the kept parent. `php artisan fresh:custom posts --drop-referenced` still keeps `users`, because dropping the parent would strip the constraint from `posts`.
 
 ### Multiple connections
 

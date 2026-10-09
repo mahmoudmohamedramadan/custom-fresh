@@ -167,6 +167,7 @@ class RefreshPlanBuilder
             $related   = $this->foreignKeys->{$method}($preserved, $this->tables, ['migrations']);
             $preserved = $related['preserved'];
             $notes     = array_merge($notes, $related['notes']);
+            $warnings  = array_merge($warnings, $related['warnings']);
 
             $resolved  = $this->resolvePreserved(
                 $preserved,
@@ -193,10 +194,9 @@ class RefreshPlanBuilder
 
         $migrationPlan = $this->planMigrations($preserved, ! empty($input['freezeSchema']));
 
-        $warnings = array_merge(
-            $warnings,
-            $this->foreignKeys->warnings($preserved, $dropped)
-        );
+        $relations = $this->foreignKeys->describeRelations($preserved, $dropped);
+        $notes     = array_merge($notes, $relations['notes']);
+        $warnings  = array_merge($warnings, $relations['warnings']);
 
         return new RefreshPlan(
             preserved: $preserved,
@@ -289,7 +289,7 @@ class RefreshPlanBuilder
             }
 
             if (! isset($existing[$table])) {
-                $notes[] = "Table [{$table}] does not exist yet; migrate will create it.";
+                $warnings[] = "Table [{$table}] does not exist.";
                 continue;
             }
 

@@ -305,7 +305,14 @@ class CustomFreshCommandTest extends TestCase
         $path = $this->migrateFixtures($this->baseMigrations);
         $this->seedKeptRow();
 
-        $this->freshCustom($path, ['tables' => 'cf_posts'])->assertSuccessful();
+        $this->freshCustom($path, ['tables' => 'cf_posts'])
+            ->expectsOutputToContain(
+                'Also preserving [cf_users] because [cf_posts] references it.'
+            )
+            ->doesntExpectOutputToContain(
+                'Preserved table [cf_posts] references [cf_users], which cannot be dropped.'
+            )
+            ->assertSuccessful();
 
         $this->assertSame('kept@example.com', DB::table('cf_users')->value('email'));
         $this->assertSame('original-post', DB::table('cf_posts')->value('title'));
@@ -341,7 +348,14 @@ class CustomFreshCommandTest extends TestCase
         $this->freshCustom($path, [
             '--keep'            => 'cf_posts',
             '--drop-referenced' => true,
-        ])->assertSuccessful();
+        ])
+            ->expectsOutputToContain(
+                'Preserved table [cf_posts] references [cf_users], which cannot be dropped.'
+            )
+            ->doesntExpectOutputToContain(
+                'Also preserving [cf_users] because [cf_posts] references it.'
+            )
+            ->assertSuccessful();
 
         $this->assertTrue(Schema::hasTable('cf_posts'));
         $this->assertTrue(Schema::hasTable('cf_users'));
@@ -374,7 +388,14 @@ class CustomFreshCommandTest extends TestCase
         $path = $this->migrateFixtures($this->baseMigrations);
         $this->seedKeptRow();
 
-        $this->freshCustom($path)->assertSuccessful();
+        $this->freshCustom($path)
+            ->expectsOutputToContain(
+                'Also preserving [cf_users] because [cf_posts] references it.'
+            )
+            ->doesntExpectOutputToContain(
+                'Preserved table [cf_posts] references [cf_users], which cannot be dropped.'
+            )
+            ->assertSuccessful();
 
         $this->assertSame('original-post', DB::table('cf_posts')->value('title'));
         $this->assertSame('kept@example.com', DB::table('cf_users')->value('email'));
@@ -391,7 +412,14 @@ class CustomFreshCommandTest extends TestCase
         $path = $this->migrateFixtures($this->baseMigrations);
         $this->seedKeptRow();
 
-        $this->freshCustom($path, ['--drop-referenced' => true])->assertSuccessful();
+        $this->freshCustom($path, ['--drop-referenced' => true])
+            ->expectsOutputToContain(
+                'Preserved table [cf_posts] references [cf_users], which cannot be dropped.'
+            )
+            ->doesntExpectOutputToContain(
+                'Also preserving [cf_users] because [cf_posts] references it.'
+            )
+            ->assertSuccessful();
 
         $this->assertSame('original-post', DB::table('cf_posts')->value('title'));
         $this->assertSame('kept@example.com', DB::table('cf_users')->value('email'));
@@ -589,26 +617,39 @@ class CustomFreshCommandTest extends TestCase
         $this->assertStringContainsString('0001_01_01_000000_create_cf_users_table.php', $output);
     }
 
-    public function test_it_warns_about_foreign_keys_that_would_break()
+    public function test_it_notes_when_a_dropped_child_references_a_kept_parent()
     {
         $path = $this->migrateFixtures($this->baseMigrations);
         $this->seedKeptRow();
 
-        $warnings = (new ForeignKeyAdvisor('testing'))->warnings(
+        $relations = (new ForeignKeyAdvisor('testing'))->describeRelations(
             ['cf_users'],
             ['cf_posts', 'cf_oauth_tokens']
         );
 
-        if ($warnings === []) {
+        if ($relations['notes'] === [] && $relations['warnings'] === []) {
             $this->markTestSkipped('Foreign key metadata is not available on this driver.');
         }
 
         $this->assertContains(
             'Dropped table [cf_posts] references preserved table [cf_users].',
-            $warnings
+            $relations['notes']
         );
+        $this->assertSame([], $relations['warnings']);
 
-        $this->freshCustom($path, ['--keep' => 'cf_users'])->assertSuccessful();
+        $output = $this->freshCustomOutput($path, [
+            '--keep'            => 'cf_users',
+            '--drop-referenced' => true,
+        ]);
+
+        $this->assertStringContainsString(
+            'Dropped table [cf_posts] references preserved table [cf_users].',
+            $output
+        );
+        $this->assertStringNotContainsString(
+            'WARN  Dropped table [cf_posts] references preserved table [cf_users].',
+            $output
+        );
     }
 
     public function test_it_dispatches_lifecycle_events()
@@ -768,14 +809,23 @@ class CustomFreshCommandTest extends TestCase
         $this->assertSame('kept@example.com', DB::table('cf_users')->value('email'));
     }
 
-    public function test_it_notes_when_a_kept_table_does_not_exist_yet()
+    public function test_it_warns_when_a_kept_table_does_not_exist()
     {
         $path = $this->migrateFixtures($this->baseMigrations);
         $this->seedKeptRow();
 
         $this->freshCustom($path, ['--keep' => 'cf_users,cf_future'])
-            ->expectsOutputToContain('does not exist yet')
+            ->expectsOutputToContain('Table [cf_future] does not exist.')
             ->assertSuccessful();
+    }
+
+    public function test_it_fails_when_the_only_kept_table_does_not_exist()
+    {
+        $path = $this->migrateFixtures($this->baseMigrations);
+
+        $this->freshCustom($path, ['--keep' => 'usersss'])
+            ->expectsOutputToContain('Table [usersss] does not exist.')
+            ->assertFailed();
     }
 
     public function test_confirm_in_blocks_without_force()
@@ -814,7 +864,9 @@ class CustomFreshCommandTest extends TestCase
     {
         $path = $this->migrateFixtures($this->baseMigrations);
 
-        $this->freshCustom($path)->assertFailed();
+        $this->freshCustom($path)
+            ->expectsOutputToContain('No tables to preserve were specified.')
+            ->assertFailed();
     }
 
     public function test_migrate_fresh_command_can_be_resolved()

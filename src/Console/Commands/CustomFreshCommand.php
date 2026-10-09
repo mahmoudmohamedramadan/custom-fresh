@@ -170,12 +170,13 @@ class CustomFreshCommand extends Command
         $this->plan = $this->makePlanBuilder()->build($this->planInput());
 
         if ($this->plan->isEmpty()) {
-            $this->components->warn(
-                'No tables to preserve or drop were resolved. '
-                    . 'Pass tables via the argument, "--keep=", "--drop=", or "--preset=", '
-                    . 'set "always_keep"/"patterns" in config/custom-fresh.php, '
-                    . 'or use "php artisan migrate:fresh" for a full reset.'
-            );
+            if ($this->plan->warnings !== []) {
+                foreach ($this->plan->warnings as $warning) {
+                    $this->components->error($warning);
+                }
+            } else {
+                $this->components->error('No tables to preserve were specified.');
+            }
 
             return self::FAILURE;
         }

@@ -1,6 +1,12 @@
 # Release Notes for 2.x
 
-## [Unreleased](https://github.com/mahmoudmohamedramadan/custom-fresh/compare/v2.2.0...2.x)
+## [Unreleased](https://github.com/mahmoudmohamedramadan/custom-fresh/compare/v2.2.1...2.x)
+
+## [v2.2.1](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v2.2.1)
+
+- [2.x] Warns that a referenced parent cannot be dropped only when `--drop-referenced` is passed: `Preserved table [posts] references [users], which cannot be dropped.` Without the flag, keeping a child still notes `Also preserving [users] because [posts] references it.`
+- [2.x] Notes (INFO) when a dropped child still references a kept parent: `Dropped table [posts] references preserved table [users].` A kept child that references a dropped parent remains a warning.
+- [2.x] Errors with `Table [usersss] does not exist.` when a kept table is missing, and `No tables to preserve were specified.` when nothing is resolved.
 
 ## [v2.2.0](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v2.2.0)
 
