@@ -1,6 +1,13 @@
 # Release Notes for 2.x
 
-## [Unreleased](https://github.com/mahmoudmohamedramadan/custom-fresh/compare/v2.2.0...2.x)
+## [Unreleased](https://github.com/mahmoudmohamedramadan/custom-fresh/compare/v2.2.1...2.x)
+
+## [v2.2.1](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v2.2.1)
+
+- [2.x] Warns that a referenced parent cannot be dropped only with `--drop-referenced`.
+- [2.x] Notes when a dropped child still references a kept parent.
+- [2.x] Errors when a kept table does not exist, or when nothing is specified.
+- [2.x] `--drop` of a table that shares a create migration asks to drop related tables. No cancels; non-interactive keeps the group and warns.
 
 ## [v2.2.0](https://github.com/mahmoudmohamedramadan/custom-fresh/releases/tag/v2.2.0)
 

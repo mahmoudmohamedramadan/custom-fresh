@@ -77,13 +77,14 @@ class ForeignKeyAdvisorTest extends TestCase
         $this->assertContains('cf_posts', $result['preserved']);
         $this->assertContains('cf_users', $result['preserved']);
         $this->assertNotContains('cf_comments', $result['preserved']);
+        $this->assertSame([], $result['notes']);
         $this->assertContains(
-            'Also preserving [cf_users] because [cf_posts] references it.',
-            $result['notes']
+            'Preserved table [cf_posts] references [cf_users], which cannot be dropped.',
+            $result['warnings']
         );
         $this->assertNotContains(
             'Pass --drop-referenced to drop those referenced tables instead.',
-            $result['notes']
+            $result['warnings']
         );
     }
 
@@ -106,6 +107,7 @@ class ForeignKeyAdvisorTest extends TestCase
 
         $this->assertSame(['cf_posts'], $result['preserved']);
         $this->assertSame([], $result['notes']);
+        $this->assertSame([], $result['warnings']);
     }
 
     public function test_expand_dependents_keeps_child_tables()
@@ -130,5 +132,30 @@ class ForeignKeyAdvisorTest extends TestCase
             'Also preserving [cf_posts] because it references [cf_users].',
             $result['notes']
         );
+        $this->assertSame([], $result['warnings']);
+    }
+
+    public function test_expand_related_notes_parent_tables_instead_of_warning()
+    {
+        $advisor = new class('testing') extends ForeignKeyAdvisor {
+            public function edges(array $tables)
+            {
+                return [
+                    ['from' => 'cf_posts', 'to' => 'cf_users'],
+                ];
+            }
+        };
+
+        $result = $advisor->expandRelated(
+            ['cf_posts'],
+            ['cf_users', 'cf_posts']
+        );
+
+        $this->assertContains('cf_users', $result['preserved']);
+        $this->assertContains(
+            'Also preserving [cf_users] because [cf_posts] references it.',
+            $result['notes']
+        );
+        $this->assertSame([], $result['warnings']);
     }
 }

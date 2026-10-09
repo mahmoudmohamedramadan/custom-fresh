@@ -169,13 +169,18 @@ class CustomFreshCommand extends Command
         // keys are not left pointing at a dropped sibling.
         $this->plan = $this->makePlanBuilder()->build($this->planInput());
 
+        if ($this->plan->cancelled) {
+            return self::SUCCESS;
+        }
+
         if ($this->plan->isEmpty()) {
-            $this->components->warn(
-                'No tables to preserve or drop were resolved. '
-                    . 'Pass tables via the argument, "--keep=", "--drop=", or "--preset=", '
-                    . 'set "always_keep"/"patterns" in config/custom-fresh.php, '
-                    . 'or use "php artisan migrate:fresh" for a full reset.'
-            );
+            if ($this->plan->warnings !== []) {
+                foreach ($this->plan->warnings as $warning) {
+                    $this->components->error($warning);
+                }
+            } else {
+                $this->components->error('No tables to preserve were specified.');
+            }
 
             return self::FAILURE;
         }
@@ -294,7 +299,32 @@ class CustomFreshCommand extends Command
                 "Choose the correct table instead ({$invalid})",
                 $candidates
             ),
+            'confirmDropRelated' => function (string $table, array $shared, array $related) {
+                if ($this->option('explain') || ! $this->input->isInteractive()) {
+                    return null;
+                }
+
+                $this->line(
+                    "Dropping [{$table}] may affect related tables: {$this->formatTables($related)}."
+                );
+
+                return $this->confirm('Drop all these tables?');
+            },
         ];
+    }
+
+    /**
+     * Format table names as [users], [posts].
+     *
+     * @param  array<int, string>  $tables
+     * @return string
+     */
+    protected function formatTables(array $tables)
+    {
+        return implode(', ', array_map(
+            static fn(string $table) => "[{$table}]",
+            $tables
+        ));
     }
 
     /**

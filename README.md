@@ -64,7 +64,7 @@ After installing the package, you will see a new `fresh:custom` command.
 You can exclude specific tables while refreshing the database inside your project:
 
 ```SHELL
-php artisan fresh:custom users,foo
+php artisan fresh:custom users
 ```
 
 The same can be expressed with the `--keep` option (which can be combined with the positional argument):
@@ -74,8 +74,6 @@ php artisan fresh:custom --keep=users,personal_access_tokens
 ```
 
 When nothing is passed and the config is empty, an interactive picker lists the discovered tables.
-
-If a kept table is created in the same migration file as other tables (Laravel's default `users` / `password_reset_tokens` / `sessions` file), those sibling tables are preserved too.
 
 > [!IMPORTANT]
 > Do not forget always to use the `-h` of the command to check out all supported options.
@@ -149,15 +147,11 @@ php artisan fresh:custom posts
 php artisan fresh:custom users
 ```
 
-`posts` keeps `users`, and `users` keeps `posts`. The command tells you which related tables were added.
-
-Pass `--drop-referenced` to refresh **child** tables of a kept parent. Parent tables that a kept child still references are never dropped, on any driver, so foreign keys stay intact:
+Pass `--drop-referenced` to refresh child tables of a kept parent:
 
 ```SHELL
 php artisan fresh:custom users --drop-referenced
 ```
-
-That keeps `users` and drops `posts` (then migrate recreates `posts` with its foreign key). `php artisan fresh:custom posts --drop-referenced` still keeps `users`, because dropping the parent would strip the constraint from `posts`.
 
 ### Multiple connections
 

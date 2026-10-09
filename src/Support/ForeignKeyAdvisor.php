@@ -179,16 +179,20 @@ class ForeignKeyAdvisor
     }
 
     /**
-     * Describe relations that would break if the drop list is applied.
+     * Describe foreign-key relations between preserved and dropped tables.
+     *
+     * Dropping a child of a kept parent is expected (INFO). A kept child
+     * that still references a dropped parent is unsafe (WARN).
      *
      * @param  array<int, string>  $preserved
      * @param  array<int, string>  $dropped
-     * @return array<int, string>
+     * @return array{notes: array<int, string>, warnings: array<int, string>}
      */
-    public function warnings(array $preserved, array $dropped)
+    public function describeRelations(array $preserved, array $dropped)
     {
         $droppedLookup = array_flip($dropped);
-        $messages      = [];
+        $notes         = [];
+        $warnings      = [];
 
         foreach ($this->edges(array_values(array_unique(array_merge($preserved, $dropped)))) as $edge) {
             $childKept  = in_array($edge['from'], $preserved, true);
@@ -197,15 +201,18 @@ class ForeignKeyAdvisor
             $childDrop  = isset($droppedLookup[$edge['from']]);
 
             if ($childKept && $parentDrop) {
-                $messages[] = "Preserved table [{$edge['from']}] references [{$edge['to']}], which will be dropped.";
+                $warnings[] = "Preserved table [{$edge['from']}] references [{$edge['to']}], which will be dropped.";
             }
 
             if ($parentKept && $childDrop) {
-                $messages[] = "Dropped table [{$edge['from']}] references preserved table [{$edge['to']}].";
+                $notes[] = "Dropped table [{$edge['from']}] references preserved table [{$edge['to']}].";
             }
         }
 
-        return array_values(array_unique($messages));
+        return [
+            'notes'    => array_values(array_unique($notes)),
+            'warnings' => array_values(array_unique($warnings)),
+        ];
     }
 
     /**
@@ -214,7 +221,7 @@ class ForeignKeyAdvisor
      * @param  array<int, string>  $preserved
      * @param  array<int, string>  $all
      * @param  array<int, string>  $exclude
-     * @return array{preserved: array<int, string>, notes: array<int, string>}
+     * @return array{preserved: array<int, string>, notes: array<int, string>, warnings: array<int, string>}
      */
     public function expandReferenced(array $preserved, array $all, array $exclude = [])
     {
@@ -227,7 +234,7 @@ class ForeignKeyAdvisor
      * @param  array<int, string>  $preserved
      * @param  array<int, string>  $all
      * @param  array<int, string>  $exclude
-     * @return array{preserved: array<int, string>, notes: array<int, string>}
+     * @return array{preserved: array<int, string>, notes: array<int, string>, warnings: array<int, string>}
      */
     public function expandDependents(array $preserved, array $all, array $exclude = [])
     {
@@ -240,7 +247,7 @@ class ForeignKeyAdvisor
      * @param  array<int, string>  $preserved
      * @param  array<int, string>  $all
      * @param  array<int, string>  $exclude
-     * @return array{preserved: array<int, string>, notes: array<int, string>}
+     * @return array{preserved: array<int, string>, notes: array<int, string>, warnings: array<int, string>}
      */
     public function expandRelated(array $preserved, array $all, array $exclude = [])
     {
@@ -254,17 +261,18 @@ class ForeignKeyAdvisor
      * @param  array<int, string>  $all
      * @param  array<int, string>  $exclude
      * @param  string  $direction  referenced|dependents|both
-     * @return array{preserved: array<int, string>, notes: array<int, string>}
+     * @return array{preserved: array<int, string>, notes: array<int, string>, warnings: array<int, string>}
      */
     protected function expandEdges(array $preserved, array $all, array $exclude, string $direction)
     {
-        $known   = array_flip($all);
-        $skip    = array_flip($exclude);
-        $keep    = array_values(array_unique($preserved));
-        $notes   = [];
-        $edges   = $this->edges($all);
-        $safety  = 0;
-        $parents = $direction === 'referenced' || $direction === 'both';
+        $known    = array_flip($all);
+        $skip     = array_flip($exclude);
+        $keep     = array_values(array_unique($preserved));
+        $notes    = [];
+        $warnings = [];
+        $edges    = $this->edges($all);
+        $safety   = 0;
+        $parents  = $direction === 'referenced' || $direction === 'both';
         $children = $direction === 'dependents' || $direction === 'both';
 
         do {
@@ -274,13 +282,31 @@ class ForeignKeyAdvisor
                 $hasFrom = in_array($edge['from'], $keep, true);
                 $hasTo   = in_array($edge['to'], $keep, true);
 
-                if ($parents && $hasFrom && ! $hasTo && isset($known[$edge['to']]) && ! isset($skip[$edge['to']])) {
-                    $keep[]  = $edge['to'];
-                    $notes[] = "Also preserving [{$edge['to']}] because [{$edge['from']}] references it.";
+                if (
+                    $parents
+                    && $hasFrom
+                    && ! $hasTo
+                    && isset($known[$edge['to']])
+                    && ! isset($skip[$edge['to']])
+                ) {
+                    $keep[] = $edge['to'];
+
+                    if ($direction === 'referenced') {
+                        $warnings[] = "Preserved table [{$edge['from']}] references [{$edge['to']}], which cannot be dropped.";
+                    } else {
+                        $notes[] = "Also preserving [{$edge['to']}] because [{$edge['from']}] references it.";
+                    }
+
                     $added++;
                 }
 
-                if ($children && $hasTo && ! $hasFrom && isset($known[$edge['from']]) && ! isset($skip[$edge['from']])) {
+                if (
+                    $children
+                    && $hasTo
+                    && ! $hasFrom
+                    && isset($known[$edge['from']])
+                    && ! isset($skip[$edge['from']])
+                ) {
                     $keep[]  = $edge['from'];
                     $notes[] = "Also preserving [{$edge['from']}] because it references [{$edge['to']}].";
                     $added++;
@@ -293,6 +319,7 @@ class ForeignKeyAdvisor
         return [
             'preserved' => array_values(array_unique($keep)),
             'notes'     => array_values(array_unique($notes)),
+            'warnings'  => array_values(array_unique($warnings)),
         ];
     }
 
