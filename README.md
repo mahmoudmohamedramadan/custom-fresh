@@ -1,12 +1,26 @@
 # Custom Fresh
 
-![Custom Fresh](/art/logo.png "Custom Fresh")
+<p align="center">
+    <img src="/art/logo.png" alt="Custom Fresh" width="500">
+</p>
 
-![Latest Version](https://img.shields.io/packagist/v/ramadan/custom-fresh?style=flat-square&logo=packagist)
-![Total Downloads](https://img.shields.io/packagist/dt/ramadan/custom-fresh?style=flat-square)
-![PHP](https://img.shields.io/badge/php-%5E8.2-777BB4?logo=php&style=flat-square)
-![Laravel](https://img.shields.io/badge/laravel-%5E10.0%7C%5E11.0%7C%5E12.0%7C%5E13.0-FF2D20?logo=laravel&style=flat-square)
-![License](https://img.shields.io/packagist/l/ramadan/custom-fresh?style=flat-square)
+<p align="center">
+    <a href="https://packagist.org/packages/ramadan/custom-fresh">
+        <img src="https://img.shields.io/packagist/v/ramadan/custom-fresh?style=flat-square&logo=packagist" alt="Latest Version">
+    </a>
+    <a href="https://packagist.org/packages/ramadan/custom-fresh">
+        <img src="https://img.shields.io/packagist/dt/ramadan/custom-fresh?style=flat-square" alt="Total Downloads">
+    </a>
+    <a href="https://www.php.net/">
+        <img src="https://img.shields.io/badge/php-%5E8.2-777BB4?logo=php&style=flat-square" alt="PHP">
+    </a>
+    <a href="https://laravel.com/">
+        <img src="https://img.shields.io/badge/laravel-%5E10.0%7C%5E11.0%7C%5E12.0%7C%5E13.0-FF2D20?logo=laravel&style=flat-square" alt="Laravel">
+    </a>
+    <a href="https://packagist.org/packages/ramadan/custom-fresh">
+        <img src="https://img.shields.io/packagist/l/ramadan/custom-fresh?style=flat-square" alt="License">
+    </a>
+</p>
 
  - - -
 
