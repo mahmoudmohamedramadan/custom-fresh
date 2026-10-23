@@ -1,7 +1,7 @@
 # Custom Fresh
 
 <p align="center">
-    <img src="/art/logo.png" alt="Custom Fresh" width="500">
+    <img src="/art/logo.png" alt="Custom Fresh" width="350">
 </p>
 
 <p align="center">
